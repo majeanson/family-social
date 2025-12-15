@@ -42,6 +42,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import type { AppSettings, PersonFormData } from "@/types";
+import { GoogleDriveSync } from "@/components/sync/google-drive-sync";
 
 // Parse text format response (from Copy Text / Native Share)
 function parseTextResponse(text: string): PersonFormData | null {
@@ -292,6 +293,9 @@ export default function SettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Google Drive Sync */}
+      <GoogleDriveSync />
 
       {/* Import Shared Response */}
       <Card>
