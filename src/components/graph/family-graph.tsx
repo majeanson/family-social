@@ -29,7 +29,8 @@ function getInitials(firstName: string, lastName: string): string {
 function PersonNode({ data }: NodeProps) {
   const router = useRouter();
   const person = data.person as Person;
-  const isFamily = person.tags.includes("family");
+  const hasRelationships = data.hasRelationships as boolean;
+  const isFamily = person.tags.includes("family") || hasRelationships;
 
   return (
     <div
@@ -38,7 +39,7 @@ function PersonNode({ data }: NodeProps) {
         hover:shadow-xl hover:scale-105
         ${isFamily
           ? "bg-blue-50 border-blue-200 dark:bg-blue-950/50 dark:border-blue-800"
-          : "bg-green-50 border-green-200 dark:bg-green-950/50 dark:border-green-800"
+          : "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/50 dark:border-emerald-800"
         }
       `}
       onClick={() => router.push(`/person/${person.id}`)}
@@ -166,11 +167,16 @@ function calculateLayout(
         y = centerY + radius * Math.sin(angle);
       }
 
+      // Check if person has any relationships
+      const hasRelationships = relationships.some(
+        (r) => r.personAId === personId || r.personBId === personId
+      );
+
       nodes.push({
         id: personId,
         type: "person",
         position: { x, y },
-        data: { person },
+        data: { person, hasRelationships },
       });
     });
   });

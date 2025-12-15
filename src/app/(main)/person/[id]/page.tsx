@@ -1,7 +1,6 @@
 "use client";
 
-import { use, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { use, useMemo, useState } from "react";
 import { useDataStore } from "@/stores/data-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { RELATIONSHIP_CONFIG } from "@/types";
+import { getBirthdayInfo } from "@/lib/date-utils";
+import { EditPersonDialog } from "@/components/people/edit-person-dialog";
 import {
   ArrowLeft,
   Cake,
@@ -19,37 +20,11 @@ import {
   Users,
   ArrowRight,
   Edit,
-  Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { toast } from "sonner";
 
 function getInitials(firstName: string, lastName: string): string {
   return `${firstName.charAt(0)}${lastName?.charAt(0) || ""}`.toUpperCase();
-}
-
-function formatBirthday(birthday: string): { display: string; age: number; upcoming: boolean } {
-  const date = new Date(birthday + "T00:00:00");
-  const today = new Date();
-  const thisYear = today.getFullYear();
-
-  let age = thisYear - date.getFullYear();
-  const thisYearBirthday = new Date(thisYear, date.getMonth(), date.getDate());
-
-  if (thisYearBirthday > today) {
-    age--;
-  }
-
-  const daysUntil = Math.ceil(
-    (thisYearBirthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  const upcoming = daysUntil > 0 && daysUntil <= 30;
-
-  return {
-    display: date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
-    age,
-    upcoming,
-  };
 }
 
 interface PageProps {
@@ -58,8 +33,8 @@ interface PageProps {
 
 export default function PersonProfilePage({ params }: PageProps) {
   const { id } = use(params);
-  const router = useRouter();
-  const { people, relationships, deletePerson } = useDataStore();
+  const { people, relationships } = useDataStore();
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   const person = useMemo(() => people.find((p) => p.id === id), [people, id]);
 
@@ -96,14 +71,6 @@ export default function PersonProfilePage({ params }: PageProps) {
     return groups;
   }, [personRelationships]);
 
-  const handleDelete = () => {
-    if (person && window.confirm(`Are you sure you want to delete ${person.firstName}?`)) {
-      deletePerson(id);
-      toast.success(`${person.firstName} has been removed`);
-      router.push("/");
-    }
-  };
-
   if (!person) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -119,7 +86,7 @@ export default function PersonProfilePage({ params }: PageProps) {
     );
   }
 
-  const birthday = person.birthday ? formatBirthday(person.birthday) : null;
+  const birthday = getBirthdayInfo(person.birthday);
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -154,14 +121,10 @@ export default function PersonProfilePage({ params }: PageProps) {
                     <p className="text-lg text-muted-foreground">&quot;{person.nickname}&quot;</p>
                   )}
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="icon">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="icon" onClick={handleDelete}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
+                <Button variant="outline" onClick={() => setShowEditDialog(true)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
               </div>
 
               {/* Tags */}
@@ -179,14 +142,15 @@ export default function PersonProfilePage({ params }: PageProps) {
               <div className="grid gap-3 sm:grid-cols-2">
                 {birthday && (
                   <div className="flex items-center gap-3 text-sm">
-                    <div className={`p-2 rounded-full ${birthday.upcoming ? "bg-orange-100 dark:bg-orange-900/30" : "bg-muted"}`}>
-                      <Cake className={`h-4 w-4 ${birthday.upcoming ? "text-orange-600" : "text-muted-foreground"}`} />
+                    <div className={`p-2 rounded-full ${birthday.isUpcoming || birthday.isToday ? "bg-orange-100 dark:bg-orange-900/30" : "bg-muted"}`}>
+                      <Cake className={`h-4 w-4 ${birthday.isUpcoming || birthday.isToday ? "text-orange-600" : "text-muted-foreground"}`} />
                     </div>
                     <div>
                       <p className="font-medium">{birthday.display}</p>
                       <p className="text-muted-foreground">
                         {birthday.age} years old
-                        {birthday.upcoming && " • Birthday soon!"}
+                        {birthday.isToday && " • Birthday today! 🎉"}
+                        {birthday.isUpcoming && ` • In ${birthday.daysUntil} days`}
                       </p>
                     </div>
                   </div>
@@ -442,6 +406,13 @@ export default function PersonProfilePage({ params }: PageProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <EditPersonDialog
+        person={person}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+      />
     </div>
   );
 }

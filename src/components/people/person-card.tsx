@@ -11,6 +11,7 @@ import {
 import { useDataStore } from "@/stores/data-store";
 import type { Person } from "@/types";
 import { RELATIONSHIP_CONFIG } from "@/types";
+import { getBirthdayInfo } from "@/lib/date-utils";
 import { Calendar, Mail, Phone, StickyNote, ArrowUpRight } from "lucide-react";
 
 interface PersonCardProps {
@@ -18,36 +19,13 @@ interface PersonCardProps {
 }
 
 function getInitials(firstName: string, lastName: string): string {
-  return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-}
-
-function formatBirthday(birthday?: string): string | null {
-  if (!birthday) return null;
-  const date = new Date(birthday);
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-function getUpcomingBirthday(birthday?: string): { days: number; isToday: boolean } | null {
-  if (!birthday) return null;
-  const today = new Date();
-  const bday = new Date(birthday);
-  bday.setFullYear(today.getFullYear());
-
-  if (bday < today) {
-    bday.setFullYear(today.getFullYear() + 1);
-  }
-
-  const diffTime = bday.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  return { days: diffDays, isToday: diffDays === 0 };
+  return `${firstName.charAt(0)}${lastName?.charAt(0) || ""}`.toUpperCase();
 }
 
 export function PersonCard({ person }: PersonCardProps) {
   const { relationships, people } = useDataStore();
   const initials = getInitials(person.firstName, person.lastName);
-  const birthday = formatBirthday(person.birthday);
-  const upcomingBirthday = getUpcomingBirthday(person.birthday);
+  const birthday = getBirthdayInfo(person.birthday);
   const displayName = person.nickname || `${person.firstName} ${person.lastName}`;
 
   // Get relationships for this person
@@ -130,13 +108,13 @@ export function PersonCard({ person }: PersonCardProps) {
           {birthday && (
             <span className="flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5" />
-              <span>{birthday}</span>
-              {upcomingBirthday && upcomingBirthday.days <= 30 && (
+              <span>{birthday.shortDisplay}</span>
+              {(birthday.isToday || birthday.isUpcoming) && (
                 <Badge
-                  variant={upcomingBirthday.isToday ? "default" : "secondary"}
+                  variant={birthday.isToday ? "default" : "secondary"}
                   className="text-[10px] px-1 py-0 h-4"
                 >
-                  {upcomingBirthday.isToday ? "Today!" : `${upcomingBirthday.days}d`}
+                  {birthday.isToday ? "Today!" : `${birthday.daysUntil}d`}
                 </Badge>
               )}
             </span>
