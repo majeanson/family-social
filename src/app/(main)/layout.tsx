@@ -1,4 +1,5 @@
 import { Header, DataProvider, ThemeProvider } from "@/components/layout";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 export default function MainLayout({
   children,
@@ -11,7 +12,9 @@ export default function MainLayout({
         <div className="min-h-screen bg-background">
           <Header />
           <main className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
-            {children}
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
           </main>
         </div>
       </ThemeProvider>

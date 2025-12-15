@@ -153,6 +153,11 @@ export const useDataStore = create<DataState>()(
 
     // Relationship actions
     addRelationship: (personAId, personBId, type, label) => {
+      // Prevent self-relationships
+      if (personAId === personBId) {
+        console.warn("Cannot create a relationship between a person and themselves");
+        return "";
+      }
       const id = uuid();
       const now = new Date().toISOString();
       set((state) => {

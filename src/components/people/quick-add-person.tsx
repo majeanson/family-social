@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { isValidEmail, isValidBirthday } from "@/lib/utils";
 import type { RelationshipType, FormTemplate } from "@/types";
 import { MOCK_FORM_TEMPLATES } from "@/lib/mock-data";
 import { User, Link2, Info, FileText, Sparkles } from "lucide-react";
@@ -61,12 +62,6 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
     ? allTemplates.find((t) => t.id === selectedTemplateId)
     : null;
 
-  // Get field keys that are in the selected template
-  const templateFieldKeys = useMemo(() => {
-    if (!selectedTemplate) return new Set<string>();
-    return new Set(selectedTemplate.fields.map((f) => f.fieldKey));
-  }, [selectedTemplate]);
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -81,6 +76,21 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
     const tags = tagsInput
       ? tagsInput.split(",").map((t) => t.trim()).filter(Boolean)
       : [];
+
+    // Validate email format
+    if (email && !isValidEmail(email)) {
+      toast.error("Please enter a valid email address");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Validate birthday
+    const birthdayValidation = isValidBirthday(birthday);
+    if (!birthdayValidation.valid) {
+      toast.error(birthdayValidation.error);
+      setIsSubmitting(false);
+      return;
+    }
 
     const personId = addPerson({
       firstName: firstName.trim(),
@@ -119,11 +129,6 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
     setRelationshipType("");
     setSelectedTemplateId(null);
     onOpenChange(false);
-  };
-
-  // Helper to check if a field is highlighted by the template
-  const isFieldHighlighted = (fieldKey: string) => {
-    return selectedTemplate && templateFieldKeys.has(fieldKey);
   };
 
   return (

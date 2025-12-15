@@ -105,7 +105,7 @@ export function usePrimaryUser() {
     [me, relationships]
   );
 
-  // Get degrees of separation from "Me" (using BFS)
+  // Get degrees of separation from "Me" (using BFS with O(1) dequeue)
   const getDegreesOfSeparation = useCallback(
     (personId: string): number | null => {
       if (!me) return null;
@@ -119,12 +119,13 @@ export function usePrimaryUser() {
         adjacency.get(r.personBId)?.add(r.personAId);
       });
 
-      // BFS from "Me"
+      // BFS from "Me" using index-based queue (O(1) dequeue)
       const visited = new Set<string>([me.id]);
       const queue: { id: string; depth: number }[] = [{ id: me.id, depth: 0 }];
+      let queueIndex = 0;
 
-      while (queue.length > 0) {
-        const { id, depth } = queue.shift()!;
+      while (queueIndex < queue.length) {
+        const { id, depth } = queue[queueIndex++];
         const neighbors = adjacency.get(id) || new Set();
 
         for (const neighborId of neighbors) {

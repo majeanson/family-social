@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RELATIONSHIP_CONFIG, type RelationshipType } from "@/types";
+import type { RelationshipType } from "@/types";
 import { getBirthdayInfo } from "@/lib/date-utils";
 import { getInitials, cn, getRelationshipColor } from "@/lib/utils";
 import { Users, Calendar, Phone, Mail, ArrowUpRight, Sparkles } from "lucide-react";

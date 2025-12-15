@@ -28,6 +28,16 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
   Settings,
@@ -196,6 +206,7 @@ export default function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const responseFileInputRef = useRef<HTMLInputElement>(null);
   const [pastedResponse, setPastedResponse] = useState("");
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Get current family colors from settings or defaults
   const familyColors = settings.familyColors || DEFAULT_FAMILY_COLORS;
@@ -267,15 +278,14 @@ export default function SettingsPage() {
     }
   };
 
-  const handleReset = () => {
-    if (
-      window.confirm(
-        "Are you sure you want to reset all data? This action cannot be undone."
-      )
-    ) {
-      resetData();
-      toast.success("All data has been reset");
-    }
+  const handleResetClick = () => {
+    setShowResetConfirm(true);
+  };
+
+  const handleConfirmReset = () => {
+    resetData();
+    toast.success("All data has been reset");
+    setShowResetConfirm(false);
   };
 
   const handleImportResponse = () => {
@@ -837,7 +847,7 @@ Examples:
                   This will permanently delete all your data including people,
                   relationships, and form templates.
                 </p>
-                <Button variant="destructive" size="sm" onClick={handleReset}>
+                <Button variant="destructive" size="sm" onClick={handleResetClick}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   Reset All Data
                 </Button>
@@ -846,6 +856,27 @@ Examples:
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset All Data?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all your people, relationships, and form
+              templates. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmReset}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Reset All Data
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

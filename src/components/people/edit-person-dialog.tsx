@@ -11,6 +11,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +36,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { X, Plus, Trash2 } from "lucide-react";
+import { isValidEmail, isValidBirthday } from "@/lib/utils";
 import type { Person } from "@/types";
 import { RelationshipSelector } from "@/components/relationships";
 import { RELATIONSHIP_CONFIG, type RelationshipType } from "@/types";
@@ -86,6 +97,9 @@ function EditPersonFormContent({
   const [newRelationshipPersonId, setNewRelationshipPersonId] = useState("");
   const [newRelationshipType, setNewRelationshipType] = useState<RelationshipType>("friend");
 
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   // Get person's relationships
   const personRelationships = relationships.filter(
     (r) => r.personAId === person.id || r.personBId === person.id
@@ -99,12 +113,26 @@ function EditPersonFormContent({
       return;
     }
 
+    // Validate email format
+    const trimmedEmail = email.trim();
+    if (trimmedEmail && !isValidEmail(trimmedEmail)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    // Validate birthday
+    const birthdayValidation = isValidBirthday(birthday);
+    if (!birthdayValidation.valid) {
+      toast.error(birthdayValidation.error);
+      return;
+    }
+
     updatePerson(person.id, {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       nickname: nickname.trim() || undefined,
       photo,
-      email: email.trim() || undefined,
+      email: trimmedEmail || undefined,
       phone: phone.trim() || undefined,
       birthday: birthday || undefined,
       notes: notes.trim() || undefined,
@@ -115,12 +143,15 @@ function EditPersonFormContent({
     onClose();
   }, [firstName, lastName, nickname, photo, email, phone, birthday, notes, tags, person.id, updatePerson, onClose]);
 
-  const handleDelete = useCallback(() => {
-    if (window.confirm(`Are you sure you want to delete ${person.firstName}? This will also remove all their relationships.`)) {
-      deletePerson(person.id);
-      toast.success(`${person.firstName} has been removed`);
-      onClose();
-    }
+  const handleDeleteClick = useCallback(() => {
+    setShowDeleteConfirm(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    deletePerson(person.id);
+    toast.success(`${person.firstName} has been removed`);
+    setShowDeleteConfirm(false);
+    onClose();
   }, [person.firstName, person.id, deletePerson, onClose]);
 
   const handleAddTag = useCallback(() => {
@@ -434,7 +465,7 @@ function EditPersonFormContent({
           <Button
             type="button"
             variant="destructive"
-            onClick={handleDelete}
+            onClick={handleDeleteClick}
             className="sm:mr-auto"
           >
             <Trash2 className="h-4 w-4 mr-2" />
@@ -446,6 +477,27 @@ function EditPersonFormContent({
           <Button type="submit">Save Changes</Button>
         </DialogFooter>
       </form>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {person.firstName}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {person.firstName} and remove all their
+              relationships. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

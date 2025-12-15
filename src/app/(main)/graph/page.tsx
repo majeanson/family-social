@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useDataStore } from "@/stores/data-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -34,17 +34,12 @@ export default function GraphPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"graph" | "list">("graph");
-  const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(null);
+  // Initialize from URL param
+  const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(
+    () => searchParams.get("family")
+  );
   const [familyGroups, setFamilyGroups] = useState<FamilyGroup[]>([]);
   const [layoutType, setLayoutType] = useState<GraphLayoutType>("radial");
-
-  // Read family filter from URL on mount
-  useEffect(() => {
-    const familyParam = searchParams.get("family");
-    if (familyParam) {
-      setSelectedFamilyId(familyParam);
-    }
-  }, [searchParams]);
 
   // Update URL when family selection changes
   const handleFamilyChange = useCallback((familyId: string | null) => {

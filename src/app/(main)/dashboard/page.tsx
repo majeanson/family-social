@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getInitials } from "@/lib/utils";
-import { Crown, Settings, Users, Network, ArrowRight } from "lucide-react";
+import { Crown, Users, Network, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export default function DashboardPage() {

@@ -135,3 +135,56 @@ export const RELATIONSHIP_COLOR_OPTIONS = [
   { name: "Red", bg: "bg-red-500" },
   { name: "Gray", bg: "bg-gray-500" },
 ];
+
+/**
+ * Validate email format
+ */
+export function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+/**
+ * Validate birthday (not in the future, reasonable range)
+ */
+export function isValidBirthday(birthday: string): { valid: boolean; error?: string } {
+  if (!birthday) return { valid: true }; // Optional field
+
+  const date = new Date(birthday);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (isNaN(date.getTime())) {
+    return { valid: false, error: "Invalid date format" };
+  }
+
+  if (date > today) {
+    return { valid: false, error: "Birthday cannot be in the future" };
+  }
+
+  // Reasonable age range (150 years)
+  const minDate = new Date();
+  minDate.setFullYear(minDate.getFullYear() - 150);
+  if (date < minDate) {
+    return { valid: false, error: "Please enter a valid birthday" };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Sanitize a string for use in filenames
+ * Removes/replaces characters that are problematic in filenames
+ */
+export function sanitizeFilename(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, "") // Remove illegal characters
+    .replace(/\s+/g, "-") // Replace spaces with hyphens
+    .replace(/[^\w\-]/g, "") // Remove non-word characters except hyphens
+    .replace(/-+/g, "-") // Collapse multiple hyphens
+    .replace(/^-|-$/g, "") // Remove leading/trailing hyphens
+    .slice(0, 100) // Limit length
+    || "file"; // Fallback if empty
+}

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+
+  <!-- Connection lines -->
+  <line x1="256" y1="160" x2="156" y2="280" stroke="white" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+  <line x1="256" y1="160" x2="356" y2="280" stroke="white" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+  <line x1="156" y1="280" x2="206" y2="380" stroke="white" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+  <line x1="356" y1="280" x2="306" y2="380" stroke="white" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+  <line x1="156" y1="280" x2="356" y2="280" stroke="white" stroke-width="8" stroke-linecap="round" opacity="0.4"/>
+
+  <!-- Center person (parent) -->
+  <circle cx="256" cy="140" r="44" fill="white"/>
+  <circle cx="256" cy="125" r="20" fill="#6366f1"/>
+  <ellipse cx="256" cy="160" rx="24" ry="16" fill="#6366f1"/>
+
+  <!-- Left person -->
+  <circle cx="156" cy="280" r="36" fill="white"/>
+  <circle cx="156" cy="268" r="16" fill="#8b5cf6"/>
+  <ellipse cx="156" cy="295" rx="18" ry="12" fill="#8b5cf6"/>
+
+  <!-- Right person -->
+  <circle cx="356" cy="280" r="36" fill="white"/>
+  <circle cx="356" cy="268" r="16" fill="#8b5cf6"/>
+  <ellipse cx="356" cy="295" rx="18" ry="12" fill="#8b5cf6"/>
+
+  <!-- Bottom left child -->
+  <circle cx="206" cy="390" r="30" fill="white"/>
+  <circle cx="206" cy="380" r="14" fill="#a78bfa"/>
+  <ellipse cx="206" cy="402" rx="14" ry="10" fill="#a78bfa"/>
+
+  <!-- Bottom right child -->
+  <circle cx="306" cy="390" r="30" fill="white"/>
+  <circle cx="306" cy="380" r="14" fill="#a78bfa"/>
+  <ellipse cx="306" cy="402" rx="14" ry="10" fill="#a78bfa"/>
+</svg>

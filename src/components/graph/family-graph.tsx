@@ -16,6 +16,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { useDataStore } from "@/stores/data-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { RELATIONSHIP_CONFIG, DEFAULT_FAMILY_COLORS } from "@/types";
@@ -68,7 +69,7 @@ function PersonNode({ data }: NodeProps) {
 
       <div className="flex items-center gap-3">
         <div className="relative">
-          <Avatar className="h-10 w-10 border-2 border-white shadow">
+          <Avatar className="h-10 w-10 border-2 border-background shadow">
             {person.photo && <AvatarImage src={person.photo} alt={person.firstName} />}
             <AvatarFallback
               className={familyColor
@@ -81,7 +82,7 @@ function PersonNode({ data }: NodeProps) {
           </Avatar>
           {familyColor && (
             <div
-              className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${familyColor.bg}`}
+              className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-background ${familyColor.bg}`}
             />
           )}
         </div>
@@ -190,28 +191,28 @@ function calculateRadialPositions(
   const positioned = new Set<string>();
   const layers: string[][] = [];
 
-  // BFS to determine layers
-  const queue = [centerPerson.id];
+  // BFS to determine layers (using swap-queue pattern for O(1) dequeue)
+  let queue = [centerPerson.id];
   positioned.add(centerPerson.id);
   layers.push([centerPerson.id]);
 
   while (queue.length > 0) {
     const currentLayer: string[] = [];
-    const layerSize = queue.length;
+    const nextQueue: string[] = [];
 
-    for (let i = 0; i < layerSize; i++) {
-      const currentId = queue.shift()!;
+    for (const currentId of queue) {
       const neighbors = connections.get(currentId) || new Set();
 
       neighbors.forEach((neighborId) => {
         if (!positioned.has(neighborId)) {
           positioned.add(neighborId);
           currentLayer.push(neighborId);
-          queue.push(neighborId);
+          nextQueue.push(neighborId);
         }
       });
     }
 
+    queue = nextQueue;
     if (currentLayer.length > 0) {
       layers.push(currentLayer);
     }
@@ -266,28 +267,28 @@ function calculateHierarchicalPositions(
   const positioned = new Set<string>();
   const layers: string[][] = [];
 
-  // BFS to determine layers
-  const queue = [centerPerson.id];
+  // BFS to determine layers (using swap-queue pattern for O(1) dequeue)
+  let queue = [centerPerson.id];
   positioned.add(centerPerson.id);
   layers.push([centerPerson.id]);
 
   while (queue.length > 0) {
     const currentLayer: string[] = [];
-    const layerSize = queue.length;
+    const nextQueue: string[] = [];
 
-    for (let i = 0; i < layerSize; i++) {
-      const currentId = queue.shift()!;
+    for (const currentId of queue) {
       const neighbors = connections.get(currentId) || new Set();
 
       neighbors.forEach((neighborId) => {
         if (!positioned.has(neighborId)) {
           positioned.add(neighborId);
           currentLayer.push(neighborId);
-          queue.push(neighborId);
+          nextQueue.push(neighborId);
         }
       });
     }
 
+    queue = nextQueue;
     if (currentLayer.length > 0) {
       layers.push(currentLayer);
     }
@@ -516,6 +517,10 @@ interface FamilyGraphInnerProps {
 // Inner component that uses React Flow (client-side only)
 function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }: FamilyGraphInnerProps) {
   const { people, relationships, settings } = useDataStore();
+  const { resolvedTheme } = useTheme();
+
+  // Get background color based on theme
+  const bgGridColor = resolvedTheme === "dark" ? "#374151" : "#e5e7eb";
 
   // Get colors from settings (ensure non-empty array)
   const colors = (settings.familyColors && settings.familyColors.length > 0)
@@ -580,7 +585,7 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }
             type: "smoothstep",
           }}
         >
-          <Background color="#e5e7eb" gap={20} />
+          <Background color={bgGridColor} gap={20} />
           <Controls position="bottom-right" />
         </ReactFlow>
       </div>

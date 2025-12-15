@@ -79,7 +79,7 @@ export function FamilyDot({ family, size = "md", className, colors: propColors }
   return (
     <span
       className={cn(
-        "rounded-full border-2 border-white shadow-sm",
+        "rounded-full border-2 border-background shadow-sm",
         color.bg,
         sizeClasses[size],
         className

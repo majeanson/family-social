@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { decodeFormTemplate } from "@/lib/form-encoding";
+import { sanitizeFilename } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PhotoUpload } from "@/components/ui/photo-upload";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
@@ -98,9 +100,9 @@ function ShareFormContent() {
     const blob = new Blob([formatAsJSON()], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    const name = formData["firstName"] || "response";
+    const name = sanitizeFilename(formData["firstName"] || "response");
     a.href = url;
-    a.download = `family-info-${name.toLowerCase()}.json`;
+    a.download = `family-info-${name}.json`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success("File downloaded! Send this file back to who requested it.");
@@ -394,6 +396,14 @@ function ShareFormContent() {
                         }
                         placeholder={`Enter your ${field.label.toLowerCase()}`}
                         rows={3}
+                      />
+                    ) : field.type === "photo" ? (
+                      <PhotoUpload
+                        value={formData[field.fieldKey] || undefined}
+                        onChange={(value) =>
+                          handleInputChange(field.fieldKey, value || "")
+                        }
+                        size="md"
                       />
                     ) : (
                       <Input
