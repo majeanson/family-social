@@ -14,14 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RELATIONSHIP_CONFIG } from "@/types";
+import { RELATIONSHIP_CONFIG, type RelationshipType } from "@/types";
 import { getBirthdayInfo } from "@/lib/date-utils";
-import { getInitials, cn } from "@/lib/utils";
+import { getInitials, cn, getRelationshipColor } from "@/lib/utils";
 import { Users, Calendar, Phone, Mail, ArrowUpRight, Sparkles } from "lucide-react";
 
 export function QuickReview() {
-  const { people, relationships } = useDataStore();
+  const { people, relationships, settings } = useDataStore();
   const { familyGroups, getFamilyColor, colors } = useFamilyGroups();
+  const relationshipColors = settings.relationshipColors;
   const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(
     familyGroups.length > 0 ? familyGroups[0].id : null
   );
@@ -242,13 +243,13 @@ export function QuickReview() {
                   {rels.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {rels.slice(0, 3).map((rel, i) => {
-                        const config = RELATIONSHIP_CONFIG[rel.type as keyof typeof RELATIONSHIP_CONFIG];
+                        const relColor = getRelationshipColor(rel.type as RelationshipType, relationshipColors);
                         return (
                           <span
                             key={i}
                             className="inline-flex items-center gap-1 text-[10px] bg-background/50 rounded px-1.5 py-0.5"
                           >
-                            <span className={`h-1.5 w-1.5 rounded-full ${config?.color || "bg-gray-400"}`} />
+                            <span className={`h-1.5 w-1.5 rounded-full ${relColor}`} />
                             {rel.name}
                           </span>
                         );

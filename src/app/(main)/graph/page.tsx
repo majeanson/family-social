@@ -16,12 +16,12 @@ import {
 } from "@/components/ui/select";
 import { RelationshipBadge } from "@/components/relationships";
 import { RELATIONSHIP_CONFIG } from "@/types";
-import { GitBranch, Users, ArrowRight, LayoutGrid, Network, Filter, X } from "lucide-react";
+import { GitBranch, Users, ArrowRight, LayoutGrid, Network, Filter, X, Circle, TreePine, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { FamilyGraph, type FamilyGroup } from "@/components/graph";
+import { FamilyGraph, type FamilyGroup, type GraphLayoutType } from "@/components/graph";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getInitials } from "@/lib/utils";
-import { DEFAULT_FAMILY_COLORS } from "@/types";
+import { getInitials, getRelationshipColor } from "@/lib/utils";
+import { DEFAULT_FAMILY_COLORS, type RelationshipType } from "@/types";
 
 export default function GraphPage() {
   const { people, relationships, settings } = useDataStore();
@@ -30,11 +30,13 @@ export default function GraphPage() {
   const familyColors = (settings.familyColors && settings.familyColors.length > 0)
     ? settings.familyColors
     : DEFAULT_FAMILY_COLORS;
+  const relationshipColors = settings.relationshipColors;
   const searchParams = useSearchParams();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"graph" | "list">("graph");
   const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(null);
   const [familyGroups, setFamilyGroups] = useState<FamilyGroup[]>([]);
+  const [layoutType, setLayoutType] = useState<GraphLayoutType>("radial");
 
   // Read family filter from URL on mount
   useEffect(() => {
@@ -181,44 +183,81 @@ export default function GraphPage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Family Filter - Only show in graph tab */}
-          {activeTab === "graph" && familyGroups.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select
-                value={selectedFamilyId || "all"}
-                onValueChange={(v) => handleFamilyChange(v === "all" ? null : v)}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Filter by family..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Families</SelectItem>
-                  {familyGroups.map((group) => {
-                    const color = familyColors[group.colorIndex % familyColors.length];
-                    return (
-                      <SelectItem key={group.id} value={group.id}>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${color.bg}`} />
-                          <span>{group.name}</span>
-                          <Badge variant="secondary" className="ml-auto text-xs">
-                            {group.memberIds.size}
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-              {selectedFamilyId && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleFamilyChange(null)}
-                  className="h-8 w-8"
+          {/* Graph controls - Only show in graph tab */}
+          {activeTab === "graph" && (
+            <div className="flex items-center gap-4">
+              {/* Layout Selector */}
+              <div className="flex items-center gap-2">
+                <Select
+                  value={layoutType}
+                  onValueChange={(v) => setLayoutType(v as GraphLayoutType)}
                 >
-                  <X className="h-4 w-4" />
-                </Button>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Layout..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="radial">
+                      <div className="flex items-center gap-2">
+                        <Circle className="h-4 w-4" />
+                        <span>Radial</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="hierarchical">
+                      <div className="flex items-center gap-2">
+                        <TreePine className="h-4 w-4" />
+                        <span>Tree</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="force">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4" />
+                        <span>Force</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Family Filter */}
+              {familyGroups.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <Select
+                    value={selectedFamilyId || "all"}
+                    onValueChange={(v) => handleFamilyChange(v === "all" ? null : v)}
+                  >
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Filter by family..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Families</SelectItem>
+                      {familyGroups.map((group) => {
+                        const color = familyColors[group.colorIndex % familyColors.length];
+                        return (
+                          <SelectItem key={group.id} value={group.id}>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${color.bg}`} />
+                              <span>{group.name}</span>
+                              <Badge variant="secondary" className="ml-auto text-xs">
+                                {group.memberIds.size}
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  {selectedFamilyId && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleFamilyChange(null)}
+                      className="h-8 w-8"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -271,6 +310,7 @@ export default function GraphPage() {
           <FamilyGraph
             selectedFamilyId={selectedFamilyId}
             onFamilyGroupsChange={handleFamilyGroupsChange}
+            layoutType={layoutType}
           />
           <p className="text-sm text-muted-foreground text-center mt-4">
             Click on a person to view their profile. Drag to move, scroll to zoom.
@@ -391,6 +431,7 @@ export default function GraphPage() {
                           <div className="flex flex-wrap gap-2">
                             {connections.slice(0, 4).map((conn, idx) => {
                               const config = RELATIONSHIP_CONFIG[conn.type as keyof typeof RELATIONSHIP_CONFIG];
+                              const color = getRelationshipColor(conn.type as RelationshipType, relationshipColors);
                               return (
                                 <Badge
                                   key={idx}
@@ -398,7 +439,7 @@ export default function GraphPage() {
                                   className="text-xs gap-1"
                                 >
                                   <span
-                                    className={`h-2 w-2 rounded-full ${config?.color || "bg-gray-500"}`}
+                                    className={`h-2 w-2 rounded-full ${color}`}
                                   />
                                   {config?.label || conn.type}: {conn.name.split(" ")[0]}
                                 </Badge>

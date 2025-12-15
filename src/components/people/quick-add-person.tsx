@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useDataStore } from "@/stores/data-store";
 import { RelationshipSelector } from "@/components/relationships";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -25,8 +26,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import type { RelationshipType } from "@/types";
-import { User, Link2, Info } from "lucide-react";
+import type { RelationshipType, FormTemplate } from "@/types";
+import { MOCK_FORM_TEMPLATES } from "@/lib/mock-data";
+import { User, Link2, Info, FileText, Sparkles } from "lucide-react";
 
 interface QuickAddPersonProps {
   open: boolean;
@@ -34,13 +36,36 @@ interface QuickAddPersonProps {
 }
 
 export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
-  const { addPerson, addRelationship, people } = useDataStore();
+  const { addPerson, addRelationship, people, formTemplates } = useDataStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photo, setPhoto] = useState<string | undefined>();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [relatedTo, setRelatedTo] = useState<string>("");
   const [relationshipType, setRelationshipType] = useState<RelationshipType | "">("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+
+  // Combine user templates with mock templates
+  const allTemplates = useMemo(() => {
+    const templates: FormTemplate[] = [...formTemplates];
+    // Add mock templates that aren't already in user templates
+    MOCK_FORM_TEMPLATES.forEach((mock) => {
+      if (!templates.find((t) => t.id === mock.id)) {
+        templates.push(mock);
+      }
+    });
+    return templates;
+  }, [formTemplates]);
+
+  const selectedTemplate = selectedTemplateId
+    ? allTemplates.find((t) => t.id === selectedTemplateId)
+    : null;
+
+  // Get field keys that are in the selected template
+  const templateFieldKeys = useMemo(() => {
+    if (!selectedTemplate) return new Set<string>();
+    return new Set(selectedTemplate.fields.map((f) => f.fieldKey));
+  }, [selectedTemplate]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -82,6 +107,7 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
     setLastName("");
     setRelatedTo("");
     setRelationshipType("");
+    setSelectedTemplateId(null);
     onOpenChange(false);
   };
 
@@ -91,7 +117,13 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
     setLastName("");
     setRelatedTo("");
     setRelationshipType("");
+    setSelectedTemplateId(null);
     onOpenChange(false);
+  };
+
+  // Helper to check if a field is highlighted by the template
+  const isFieldHighlighted = (fieldKey: string) => {
+    return selectedTemplate && templateFieldKeys.has(fieldKey);
   };
 
   return (
@@ -107,6 +139,57 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
               Add a new family member or friend. Only first name is required.
             </DialogDescription>
           </DialogHeader>
+
+          {/* Template Selector */}
+          {allTemplates.length > 0 && (
+            <div className="pt-4 pb-2">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Use Template</span>
+                <span className="text-xs text-muted-foreground">(optional)</span>
+              </div>
+              <Select
+                value={selectedTemplateId || "none"}
+                onValueChange={(v) => setSelectedTemplateId(v === "none" ? null : v)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a template..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    <span className="text-muted-foreground">No template</span>
+                  </SelectItem>
+                  {allTemplates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{template.name}</span>
+                        <Badge variant="outline" className="text-xs ml-auto">
+                          {template.fields.length} fields
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedTemplate && (
+                <div className="mt-2 p-2 rounded-md bg-muted/50 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1 mb-1">
+                    <Sparkles className="h-3 w-3" />
+                    <span className="font-medium">{selectedTemplate.name}</span>
+                  </div>
+                  <p>{selectedTemplate.description}</p>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {selectedTemplate.fields.map((field) => (
+                      <Badge key={field.id} variant="secondary" className="text-[10px]">
+                        {field.label}
+                        {field.required && <span className="text-destructive ml-0.5">*</span>}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="space-y-6 py-6">
             {/* Name Section */}

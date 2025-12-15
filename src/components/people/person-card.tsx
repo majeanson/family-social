@@ -9,21 +9,24 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { useDataStore } from "@/stores/data-store";
-import type { Person } from "@/types";
+import type { Person, RelationshipType } from "@/types";
 import { RELATIONSHIP_CONFIG } from "@/types";
 import { getBirthdayInfo } from "@/lib/date-utils";
-import { getInitials, cn } from "@/lib/utils";
-import { useFamilyGroups } from "@/features/use-family-groups";
+import { getInitials, cn, getRelationshipColor } from "@/lib/utils";
+import { useFamilyGroups, usePrimaryUser } from "@/features";
 import { FamilyBadge, FamilyDot } from "./family-badge";
-import { Calendar, Mail, Phone, StickyNote, ArrowUpRight } from "lucide-react";
+import { Calendar, Mail, Phone, StickyNote, ArrowUpRight, Crown } from "lucide-react";
 
 interface PersonCardProps {
   person: Person;
 }
 
 export function PersonCard({ person }: PersonCardProps) {
-  const { relationships, people } = useDataStore();
+  const { relationships, people, settings } = useDataStore();
   const { getFamilyGroup, getFamilyColor } = useFamilyGroups();
+  const { isMe } = usePrimaryUser();
+  const relationshipColors = settings.relationshipColors;
+  const isThisPersonMe = isMe(person.id);
   const initials = getInitials(person.firstName, person.lastName);
   const birthday = getBirthdayInfo(person.birthday);
   const displayName = person.nickname || `${person.firstName} ${person.lastName}`;
@@ -58,9 +61,17 @@ export function PersonCard({ person }: PersonCardProps) {
             <FamilyDot family={family} size="sm" className="absolute -bottom-0.5 -right-0.5" />
           </div>
           <div className="flex-1 min-w-0 space-y-1">
-            <h3 className="font-semibold text-base leading-tight truncate group-hover:text-primary transition-colors">
-              {displayName}
-            </h3>
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-semibold text-base leading-tight truncate group-hover:text-primary transition-colors">
+                {displayName}
+              </h3>
+              {isThisPersonMe && (
+                <Badge className="bg-amber-500 hover:bg-amber-600 text-[10px] px-1.5 py-0 h-4 gap-0.5 flex-shrink-0">
+                  <Crown className="h-2.5 w-2.5" />
+                  Me
+                </Badge>
+              )}
+            </div>
             {person.nickname && (
               <p className="text-sm text-muted-foreground truncate">
                 {person.firstName} {person.lastName}
@@ -100,7 +111,7 @@ export function PersonCard({ person }: PersonCardProps) {
                   className="flex items-center gap-1 text-xs bg-muted/50 rounded-full px-2 py-0.5"
                 >
                   <span
-                    className={`h-4 w-4 rounded flex items-center justify-center text-white ${RELATIONSHIP_CONFIG[relType].color}`}
+                    className={`h-4 w-4 rounded flex items-center justify-center text-white ${getRelationshipColor(relType as RelationshipType, relationshipColors)}`}
                   >
                     <span className="text-[10px]">
                       {RELATIONSHIP_CONFIG[relType].label.charAt(0)}

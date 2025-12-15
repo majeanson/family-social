@@ -45,18 +45,35 @@ import {
   Monitor,
   Palette,
   RotateCcw,
+  Crown,
+  X,
 } from "lucide-react";
-import type { AppSettings, PersonFormData, FamilyColorConfig } from "@/types";
-import { DEFAULT_FAMILY_COLORS, RELATIONSHIP_CONFIG } from "@/types";
+import type { AppSettings, PersonFormData, FamilyColorConfig, RelationshipType, CustomField } from "@/types";
+import { DEFAULT_FAMILY_COLORS, RELATIONSHIP_CONFIG, getGroupedRelationshipTypes } from "@/types";
+import { v4 as uuid } from "uuid";
 import { GoogleDriveSync } from "@/components/sync/google-drive-sync";
-import { useFamilyGroups } from "@/features/use-family-groups";
-import { COLOR_OPTIONS } from "@/lib/utils";
+import { useFamilyGroups, usePrimaryUser } from "@/features";
+import { COLOR_OPTIONS, RELATIONSHIP_COLOR_OPTIONS, getRelationshipColor, getInitials } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+// Known field keys (lowercase)
+const KNOWN_FIELD_KEYS = new Set([
+  "first name", "firstname", "name",
+  "last name", "lastname",
+  "nickname", "nick",
+  "email", "e-mail",
+  "phone", "telephone", "mobile",
+  "birthday", "birth date", "birthdate",
+  "photo",
+  "notes", "dietary restrictions",
+]);
 
 // Parse text format response (from Copy Text / Native Share)
 function parseTextResponse(text: string): PersonFormData | null {
   try {
     const lines = text.split("\n");
     const data: Record<string, string> = {};
+    const originalKeys: Record<string, string> = {}; // Store original casing
 
     for (const line of lines) {
       // Skip empty lines, separators, and headers
@@ -67,10 +84,12 @@ function parseTextResponse(text: string): PersonFormData | null {
 
       const colonIndex = line.indexOf(":");
       if (colonIndex > 0) {
-        const key = line.substring(0, colonIndex).trim().toLowerCase();
+        const originalKey = line.substring(0, colonIndex).trim();
+        const key = originalKey.toLowerCase();
         const value = line.substring(colonIndex + 1).trim();
         if (value && value !== "(not provided)") {
           data[key] = value;
+          originalKeys[key] = originalKey;
         }
       }
     }
@@ -78,6 +97,19 @@ function parseTextResponse(text: string): PersonFormData | null {
     // Map common field names
     const firstName = data["first name"] || data["firstname"] || data["name"]?.split(" ")[0] || "";
     if (!firstName) return null;
+
+    // Extract custom fields (fields not in known keys)
+    const customFields: CustomField[] = [];
+    for (const [key, value] of Object.entries(data)) {
+      if (!KNOWN_FIELD_KEYS.has(key)) {
+        customFields.push({
+          id: uuid(),
+          label: originalKeys[key] || key,
+          value,
+          type: "text",
+        });
+      }
+    }
 
     return {
       firstName,
@@ -88,12 +120,24 @@ function parseTextResponse(text: string): PersonFormData | null {
       birthday: data["birthday"] || data["birth date"] || data["birthdate"] || "",
       notes: data["notes"] || data["dietary restrictions"] || "",
       tags: [],
-      customFields: [],
+      customFields,
     };
   } catch {
     return null;
   }
 }
+
+// Known field keys for JSON (case-insensitive matching)
+const KNOWN_JSON_FIELD_KEYS = new Set([
+  "first name", "firstname",
+  "last name", "lastname",
+  "nickname",
+  "email",
+  "phone",
+  "birthday", "birth date", "birthdate",
+  "photo",
+  "notes", "dietary restrictions",
+]);
 
 // Parse JSON format response
 function parseJSONResponse(json: string): PersonFormData | null {
@@ -104,6 +148,20 @@ function parseJSONResponse(json: string): PersonFormData | null {
     const firstName = responses["First Name"] || responses["firstName"] || responses.firstName || "";
     if (!firstName) return null;
 
+    // Extract custom fields (fields not in known keys)
+    const customFields: CustomField[] = [];
+    for (const [key, value] of Object.entries(responses)) {
+      const keyLower = key.toLowerCase();
+      if (!KNOWN_JSON_FIELD_KEYS.has(keyLower) && typeof value === "string" && value.trim()) {
+        customFields.push({
+          id: uuid(),
+          label: key,
+          value: value,
+          type: "text",
+        });
+      }
+    }
+
     return {
       firstName,
       lastName: responses["Last Name"] || responses["lastName"] || responses.lastName || "",
@@ -113,7 +171,7 @@ function parseJSONResponse(json: string): PersonFormData | null {
       birthday: responses["Birthday"] || responses["birthday"] || responses["Birth Date"] || "",
       notes: responses["Notes"] || responses["notes"] || responses["Dietary Restrictions"] || "",
       tags: [],
-      customFields: [],
+      customFields,
     };
   } catch {
     return null;
@@ -134,6 +192,7 @@ export default function SettingsPage() {
     lastSaved,
   } = useDataStore();
   const { familyGroups } = useFamilyGroups();
+  const { me, setAsMe, clearMe } = usePrimaryUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const responseFileInputRef = useRef<HTMLInputElement>(null);
   const [pastedResponse, setPastedResponse] = useState("");
@@ -152,6 +211,23 @@ export default function SettingsPage() {
     updateSettings({ familyColors: DEFAULT_FAMILY_COLORS });
     toast.success("Colors reset to defaults");
   };
+
+  // Get current relationship colors from settings
+  const relationshipColors = settings.relationshipColors || {};
+
+  const handleChangeRelationshipColor = (type: RelationshipType, newColor: string) => {
+    const newColors = { ...relationshipColors, [type]: newColor };
+    updateSettings({ relationshipColors: newColors });
+    toast.success(`${RELATIONSHIP_CONFIG[type].label} color updated!`);
+  };
+
+  const handleResetRelationshipColors = () => {
+    updateSettings({ relationshipColors: {} });
+    toast.success("Relationship colors reset to defaults");
+  };
+
+  // Get grouped relationship types for display
+  const groupedRelationships = getGroupedRelationshipTypes();
 
   const handleExport = () => {
     const data = exportData();
@@ -313,6 +389,91 @@ export default function SettingsPage() {
           {lastSaved && (
             <div className="text-sm text-muted-foreground">
               Last saved: {lastSaved.toLocaleString()}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* "Me" Profile */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Crown className="h-5 w-5" />
+            My Profile
+          </CardTitle>
+          <CardDescription>
+            Set yourself as the primary user for relationship context
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {me ? (
+            <div className="flex items-center gap-4 p-4 rounded-lg border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+              <Avatar className="h-12 w-12">
+                {me.photo && <AvatarImage src={me.photo} alt={me.firstName} />}
+                <AvatarFallback className="bg-amber-500 text-white">
+                  {getInitials(me.firstName, me.lastName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold">
+                    {me.firstName} {me.lastName}
+                  </p>
+                  <Badge className="bg-amber-500 hover:bg-amber-600">
+                    <Crown className="h-3 w-3 mr-1" />
+                    Me
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Relationships will show from your perspective
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  clearMe();
+                  toast.success("Primary user cleared");
+                }}
+                title="Clear 'Me' selection"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                No one is set as &quot;Me&quot; yet. Setting yourself allows the app to show relationships from your perspective.
+              </p>
+              {people.length > 0 ? (
+                <div className="space-y-2">
+                  <Label>Select yourself</Label>
+                  <Select onValueChange={(id) => {
+                    setAsMe(id);
+                    const person = people.find(p => p.id === id);
+                    if (person) {
+                      toast.success(`${person.firstName} is now set as "Me"!`);
+                    }
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a person..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {people.map((person) => (
+                        <SelectItem key={person.id} value={person.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{person.firstName} {person.lastName}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  Add some people first, then you can set yourself here.
+                </p>
+              )}
             </div>
           )}
         </CardContent>
@@ -561,24 +722,57 @@ Examples:
 
           <Separator />
 
-          {/* Relationship Colors Info */}
+          {/* Relationship Colors */}
           <div className="space-y-4">
-            <Label className="text-base">Relationship Colors</Label>
-            <p className="text-sm text-muted-foreground">
-              Relationship colors are predefined based on relationship type.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(RELATIONSHIP_CONFIG).slice(0, 8).map(([type, config]) => (
-                <Badge
-                  key={type}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  <span className={`w-3 h-3 rounded-full ${config.color}`} />
-                  {config.label}
-                </Badge>
-              ))}
+            <div className="flex items-center justify-between">
+              <Label className="text-base">Relationship Colors</Label>
+              <Button variant="ghost" size="sm" onClick={handleResetRelationshipColors}>
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reset to Default
+              </Button>
             </div>
+            <p className="text-sm text-muted-foreground">
+              Customize colors for different relationship types displayed in the graph and throughout the app.
+            </p>
+
+            {groupedRelationships.map((group) => (
+              <div key={group.group} className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">{group.label}</p>
+                <div className="grid gap-2">
+                  {group.types.map((type) => {
+                    const config = RELATIONSHIP_CONFIG[type];
+                    const currentColor = getRelationshipColor(type, relationshipColors);
+                    return (
+                      <div
+                        key={type}
+                        className="flex items-center gap-3 p-2 rounded-lg border bg-muted/30"
+                      >
+                        <div className={`w-6 h-6 rounded-full ${currentColor} flex-shrink-0`} />
+                        <span className="flex-1 text-sm font-medium">{config.label}</span>
+                        <Select
+                          value={currentColor}
+                          onValueChange={(value) => handleChangeRelationshipColor(type, value)}
+                        >
+                          <SelectTrigger className="w-[130px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {RELATIONSHIP_COLOR_OPTIONS.map((option) => (
+                              <SelectItem key={option.bg} value={option.bg}>
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-4 h-4 rounded-full ${option.bg}`} />
+                                  <span>{option.name}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>

@@ -9,7 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { cn, getRelationshipColor } from "@/lib/utils";
+import { useDataStore } from "@/stores/data-store";
 import {
   type RelationshipType,
   RELATIONSHIP_CONFIG,
@@ -63,6 +64,8 @@ export function RelationshipSelector({
   className,
 }: RelationshipSelectorProps) {
   const groups = getGroupedRelationshipTypes();
+  const { settings } = useDataStore();
+  const relationshipColors = settings.relationshipColors;
 
   return (
     <Select value={value} onValueChange={onValueChange}>
@@ -80,13 +83,14 @@ export function RelationshipSelector({
             {group.types.map((type) => {
               const config = RELATIONSHIP_CONFIG[type];
               const Icon = ICON_MAP[config.icon];
+              const color = getRelationshipColor(type, relationshipColors);
               return (
                 <SelectItem key={type} value={type}>
                   <div className="flex items-center gap-2">
                     <span
                       className={cn(
                         "flex h-5 w-5 items-center justify-center rounded",
-                        config.color,
+                        color,
                         "text-white"
                       )}
                     >
@@ -119,6 +123,8 @@ export function RelationshipDisplay({
   const Icon = ICON_MAP[config.icon];
   const iconSize = size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5";
   const badgeSize = size === "sm" ? "h-4 w-4" : "h-5 w-5";
+  const { settings } = useDataStore();
+  const color = getRelationshipColor(type, settings.relationshipColors);
 
   return (
     <div className="flex items-center gap-2">
@@ -126,7 +132,7 @@ export function RelationshipDisplay({
         className={cn(
           "flex items-center justify-center rounded",
           badgeSize,
-          config.color,
+          color,
           "text-white"
         )}
       >
@@ -145,12 +151,14 @@ interface RelationshipBadgeProps {
 export function RelationshipBadge({ type, className }: RelationshipBadgeProps) {
   const config = RELATIONSHIP_CONFIG[type];
   const Icon = ICON_MAP[config.icon];
+  const { settings } = useDataStore();
+  const color = getRelationshipColor(type, settings.relationshipColors);
 
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
-        config.color,
+        color,
         "text-white",
         className
       )}

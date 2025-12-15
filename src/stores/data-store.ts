@@ -139,6 +139,10 @@ export const useDataStore = create<DataState>()(
         state.relationships = state.relationships.filter(
           (r) => r.personAId !== id && r.personBId !== id
         );
+        // Clear primaryUserId if deleting the "Me" person
+        if (state.settings.primaryUserId === id) {
+          state.settings.primaryUserId = undefined;
+        }
         state.hasUnsavedChanges = true;
       });
     },

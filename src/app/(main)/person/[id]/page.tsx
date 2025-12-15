@@ -27,7 +27,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { getInitials, cn } from "@/lib/utils";
+import { getInitials, cn, getRelationshipColor } from "@/lib/utils";
+import type { RelationshipType } from "@/types";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -35,8 +36,9 @@ interface PageProps {
 
 export default function PersonProfilePage({ params }: PageProps) {
   const { id } = use(params);
-  const { people, relationships } = useDataStore();
+  const { people, relationships, settings } = useDataStore();
   const { getFamilyGroup, getFamilyColor } = useFamilyGroups();
+  const relationshipColors = settings.relationshipColors;
   const { me, isMe, setAsMe, getMyRelationshipTo } = usePrimaryUser();
   const [showEditDialog, setShowEditDialog] = useState(false);
 
@@ -282,6 +284,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                   <div className="grid gap-2 sm:grid-cols-2">
                     {groupedRelationships.immediate.map(({ relationship, relatedPerson, relationType }) => {
                       const config = RELATIONSHIP_CONFIG[relationType as keyof typeof RELATIONSHIP_CONFIG];
+                      const color = getRelationshipColor(relationType as RelationshipType, relationshipColors);
                       return (
                         <Link
                           key={relationship.id}
@@ -301,7 +304,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                               {relatedPerson!.firstName} {relatedPerson!.lastName}
                             </p>
                             <div className="flex items-center gap-1.5">
-                              <span className={`h-2 w-2 rounded-full ${config?.color || "bg-gray-400"}`} />
+                              <span className={`h-2 w-2 rounded-full ${color}`} />
                               <span className="text-sm text-muted-foreground">
                                 {config?.label || relationType}
                               </span>
@@ -324,6 +327,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                   <div className="grid gap-2 sm:grid-cols-2">
                     {groupedRelationships.extended.map(({ relationship, relatedPerson, relationType }) => {
                       const config = RELATIONSHIP_CONFIG[relationType as keyof typeof RELATIONSHIP_CONFIG];
+                      const color = getRelationshipColor(relationType as RelationshipType, relationshipColors);
                       return (
                         <Link
                           key={relationship.id}
@@ -343,7 +347,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                               {relatedPerson!.firstName} {relatedPerson!.lastName}
                             </p>
                             <div className="flex items-center gap-1.5">
-                              <span className={`h-2 w-2 rounded-full ${config?.color || "bg-gray-400"}`} />
+                              <span className={`h-2 w-2 rounded-full ${color}`} />
                               <span className="text-sm text-muted-foreground">
                                 {config?.label || relationType}
                               </span>
@@ -366,6 +370,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                   <div className="grid gap-2 sm:grid-cols-2">
                     {groupedRelationships.social.map(({ relationship, relatedPerson, relationType }) => {
                       const config = RELATIONSHIP_CONFIG[relationType as keyof typeof RELATIONSHIP_CONFIG];
+                      const color = getRelationshipColor(relationType as RelationshipType, relationshipColors);
                       return (
                         <Link
                           key={relationship.id}
@@ -385,7 +390,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                               {relatedPerson!.firstName} {relatedPerson!.lastName}
                             </p>
                             <div className="flex items-center gap-1.5">
-                              <span className={`h-2 w-2 rounded-full ${config?.color || "bg-gray-400"}`} />
+                              <span className={`h-2 w-2 rounded-full ${color}`} />
                               <span className="text-sm text-muted-foreground">
                                 {config?.label || relationType}
                               </span>
@@ -408,6 +413,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                   <div className="grid gap-2 sm:grid-cols-2">
                     {groupedRelationships.other.map(({ relationship, relatedPerson, relationType }) => {
                       const config = RELATIONSHIP_CONFIG[relationType as keyof typeof RELATIONSHIP_CONFIG];
+                      const color = getRelationshipColor(relationType as RelationshipType, relationshipColors);
                       return (
                         <Link
                           key={relationship.id}
@@ -427,7 +433,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                               {relatedPerson!.firstName} {relatedPerson!.lastName}
                             </p>
                             <div className="flex items-center gap-1.5">
-                              <span className={`h-2 w-2 rounded-full ${config?.color || "bg-gray-400"}`} />
+                              <span className={`h-2 w-2 rounded-full ${color}`} />
                               <span className="text-sm text-muted-foreground">
                                 {config?.label || relationType}
                               </span>

@@ -19,9 +19,12 @@ import { useRouter } from "next/navigation";
 import { useDataStore } from "@/stores/data-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { RELATIONSHIP_CONFIG, DEFAULT_FAMILY_COLORS } from "@/types";
-import type { Person, Relationship, FamilyColorConfig } from "@/types";
-import { getInitials, getTailwindHex } from "@/lib/utils";
+import type { Person, Relationship, FamilyColorConfig, RelationshipType } from "@/types";
+import { getInitials, getRelationshipHex } from "@/lib/utils";
 import { detectFamilyGroups, type FamilyGroup } from "@/features/use-family-groups";
+
+// Layout types
+export type GraphLayoutType = "radial" | "hierarchical" | "force";
 
 // Context to pass colors to nodes
 const ColorsContext = createContext<FamilyColorConfig[]>(DEFAULT_FAMILY_COLORS);
@@ -101,17 +104,14 @@ const nodeTypes = {
   person: PersonNode,
 };
 
-// Calculate node positions using an improved radial layout
-function calculateLayout(
+// Helper to prepare layout data
+function prepareLayoutData(
   people: Person[],
   relationships: Relationship[],
   familyGroups: FamilyGroup[],
   selectedFamilyId: string | null,
   primaryUserId?: string | null
-): { nodes: Node[]; edges: Edge[] } {
-  const nodes: Node[] = [];
-  const edges: Edge[] = [];
-
+) {
   // Create a map of person ID to family color index
   const personFamilyColor = new Map<string, number>();
   familyGroups.forEach(group => {
@@ -134,8 +134,6 @@ function calculateLayout(
     }
   }
 
-  if (filteredPeople.length === 0) return { nodes, edges };
-
   // Build adjacency map
   const connections = new Map<string, Set<string>>();
   filteredPeople.forEach((p) => connections.set(p.id, new Set()));
@@ -148,13 +146,11 @@ function calculateLayout(
   // Find center person: prefer "Me" if in filtered people, else most connected
   let centerPerson = filteredPeople[0];
 
-  // If "Me" is set and in the filtered list, use them as center
   if (primaryUserId) {
     const mePerson = filteredPeople.find(p => p.id === primaryUserId);
     if (mePerson) {
       centerPerson = mePerson;
     } else {
-      // Fall back to most connected person
       let maxConnections = 0;
       filteredPeople.forEach((p) => {
         const numConnections = connections.get(p.id)?.size || 0;
@@ -165,7 +161,6 @@ function calculateLayout(
       });
     }
   } else {
-    // Find most connected person as center
     let maxConnections = 0;
     filteredPeople.forEach((p) => {
       const numConnections = connections.get(p.id)?.size || 0;
@@ -176,7 +171,22 @@ function calculateLayout(
     });
   }
 
-  // Position nodes in layers based on distance from center
+  return {
+    filteredPeople,
+    filteredRelationships,
+    connections,
+    centerPerson,
+    personFamilyColor,
+  };
+}
+
+// Radial layout - circular layers around center
+function calculateRadialPositions(
+  filteredPeople: Person[],
+  connections: Map<string, Set<string>>,
+  centerPerson: Person
+): Map<string, { x: number; y: number }> {
+  const positions = new Map<string, { x: number; y: number }>();
   const positioned = new Set<string>();
   const layers: string[][] = [];
 
@@ -207,7 +217,7 @@ function calculateLayout(
     }
   }
 
-  // Add unconnected people to the last layer
+  // Add unconnected people
   filteredPeople.forEach((p) => {
     if (!positioned.has(p.id)) {
       if (layers.length === 0) layers.push([]);
@@ -215,73 +225,255 @@ function calculateLayout(
     }
   });
 
-  // Position nodes with improved spacing
+  // Position nodes
   const centerX = 400;
   const centerY = 300;
-  const baseLayerSpacing = 220; // Increased from 180
-  const minNodeSpacing = 160; // Minimum space between nodes in pixels
-  const nodeWidth = 150; // Approximate node width
-  const personMap = new Map(filteredPeople.map((p) => [p.id, p]));
+  const baseLayerSpacing = 220;
+  const minNodeSpacing = 160;
 
   layers.forEach((layer, layerIndex) => {
     if (layerIndex === 0) {
-      // Center node
-      const person = personMap.get(layer[0])!;
-      nodes.push({
-        id: layer[0],
-        type: "person",
-        position: { x: centerX, y: centerY },
-        data: {
-          person,
-          hasRelationships: filteredRelationships.some(
-            (r) => r.personAId === layer[0] || r.personBId === layer[0]
-          ),
-          familyColorIndex: personFamilyColor.get(layer[0]),
-          isMe: layer[0] === primaryUserId,
-        } as PersonNodeData,
-      });
+      positions.set(layer[0], { x: centerX, y: centerY });
       return;
     }
 
-    // Calculate dynamic radius based on number of nodes in layer
-    // Ensure nodes don't overlap by calculating minimum required circumference
     const minCircumference = layer.length * minNodeSpacing;
     const minRadius = minCircumference / (2 * Math.PI);
     const baseRadius = layerIndex * baseLayerSpacing;
     const radius = Math.max(baseRadius, minRadius);
-
     const angleStep = (2 * Math.PI) / layer.length;
 
     layer.forEach((personId, index) => {
-      const person = personMap.get(personId)!;
-      // Add slight offset to starting angle based on layer to reduce overlap
       const startAngle = -Math.PI / 2 + (layerIndex * Math.PI / 12);
       const angle = startAngle + angleStep * index;
-      const x = centerX + radius * Math.cos(angle);
-      const y = centerY + radius * Math.sin(angle);
-
-      const hasRelationships = filteredRelationships.some(
-        (r) => r.personAId === personId || r.personBId === personId
-      );
-
-      nodes.push({
-        id: personId,
-        type: "person",
-        position: { x, y },
-        data: {
-          person,
-          hasRelationships,
-          familyColorIndex: personFamilyColor.get(personId),
-          isMe: personId === primaryUserId,
-        } as PersonNodeData,
+      positions.set(personId, {
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle),
       });
+    });
+  });
+
+  return positions;
+}
+
+// Hierarchical layout - tree-like structure
+function calculateHierarchicalPositions(
+  filteredPeople: Person[],
+  connections: Map<string, Set<string>>,
+  centerPerson: Person
+): Map<string, { x: number; y: number }> {
+  const positions = new Map<string, { x: number; y: number }>();
+  const positioned = new Set<string>();
+  const layers: string[][] = [];
+
+  // BFS to determine layers
+  const queue = [centerPerson.id];
+  positioned.add(centerPerson.id);
+  layers.push([centerPerson.id]);
+
+  while (queue.length > 0) {
+    const currentLayer: string[] = [];
+    const layerSize = queue.length;
+
+    for (let i = 0; i < layerSize; i++) {
+      const currentId = queue.shift()!;
+      const neighbors = connections.get(currentId) || new Set();
+
+      neighbors.forEach((neighborId) => {
+        if (!positioned.has(neighborId)) {
+          positioned.add(neighborId);
+          currentLayer.push(neighborId);
+          queue.push(neighborId);
+        }
+      });
+    }
+
+    if (currentLayer.length > 0) {
+      layers.push(currentLayer);
+    }
+  }
+
+  // Add unconnected people
+  filteredPeople.forEach((p) => {
+    if (!positioned.has(p.id)) {
+      if (layers.length === 0) layers.push([]);
+      layers[layers.length - 1].push(p.id);
+    }
+  });
+
+  // Position nodes in hierarchical tree
+  const startY = 50;
+  const layerHeight = 150;
+  const nodeSpacing = 180;
+
+  layers.forEach((layer, layerIndex) => {
+    const y = startY + layerIndex * layerHeight;
+    const totalWidth = (layer.length - 1) * nodeSpacing;
+    const startX = 400 - totalWidth / 2;
+
+    layer.forEach((personId, index) => {
+      positions.set(personId, {
+        x: startX + index * nodeSpacing,
+        y,
+      });
+    });
+  });
+
+  return positions;
+}
+
+// Force-directed layout - physics-based simulation
+function calculateForcePositions(
+  filteredPeople: Person[],
+  connections: Map<string, Set<string>>,
+  centerPerson: Person
+): Map<string, { x: number; y: number }> {
+  const positions = new Map<string, { x: number; y: number }>();
+
+  // Initialize with random positions
+  const centerX = 400;
+  const centerY = 300;
+
+  filteredPeople.forEach((p, i) => {
+    if (p.id === centerPerson.id) {
+      positions.set(p.id, { x: centerX, y: centerY });
+    } else {
+      const angle = (2 * Math.PI * i) / filteredPeople.length;
+      const radius = 200 + Math.random() * 100;
+      positions.set(p.id, {
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle),
+      });
+    }
+  });
+
+  // Simple force simulation (10 iterations)
+  const repulsion = 8000;
+  const attraction = 0.05;
+  const iterations = 50;
+
+  for (let iter = 0; iter < iterations; iter++) {
+    const forces = new Map<string, { fx: number; fy: number }>();
+    filteredPeople.forEach((p) => forces.set(p.id, { fx: 0, fy: 0 }));
+
+    // Repulsion between all nodes
+    for (let i = 0; i < filteredPeople.length; i++) {
+      for (let j = i + 1; j < filteredPeople.length; j++) {
+        const p1 = filteredPeople[i];
+        const p2 = filteredPeople[j];
+        const pos1 = positions.get(p1.id)!;
+        const pos2 = positions.get(p2.id)!;
+
+        const dx = pos2.x - pos1.x;
+        const dy = pos2.y - pos1.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const force = repulsion / (dist * dist);
+
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+
+        forces.get(p1.id)!.fx -= fx;
+        forces.get(p1.id)!.fy -= fy;
+        forces.get(p2.id)!.fx += fx;
+        forces.get(p2.id)!.fy += fy;
+      }
+    }
+
+    // Attraction along edges
+    filteredPeople.forEach((p) => {
+      const neighbors = connections.get(p.id) || new Set();
+      const pos1 = positions.get(p.id)!;
+
+      neighbors.forEach((neighborId) => {
+        const pos2 = positions.get(neighborId);
+        if (!pos2) return;
+
+        const dx = pos2.x - pos1.x;
+        const dy = pos2.y - pos1.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const force = dist * attraction;
+
+        forces.get(p.id)!.fx += (dx / dist) * force;
+        forces.get(p.id)!.fy += (dy / dist) * force;
+      });
+    });
+
+    // Apply forces
+    const damping = 0.8 * (1 - iter / iterations);
+    filteredPeople.forEach((p) => {
+      if (p.id === centerPerson.id) return; // Keep center fixed
+      const pos = positions.get(p.id)!;
+      const force = forces.get(p.id)!;
+      pos.x += force.fx * damping;
+      pos.y += force.fy * damping;
+    });
+  }
+
+  return positions;
+}
+
+// Main layout function
+function calculateLayout(
+  people: Person[],
+  relationships: Relationship[],
+  familyGroups: FamilyGroup[],
+  selectedFamilyId: string | null,
+  primaryUserId?: string | null,
+  relationshipColors?: Record<string, string>,
+  layoutType: GraphLayoutType = "radial"
+): { nodes: Node[]; edges: Edge[] } {
+  const nodes: Node[] = [];
+  const edges: Edge[] = [];
+
+  const data = prepareLayoutData(
+    people,
+    relationships,
+    familyGroups,
+    selectedFamilyId,
+    primaryUserId
+  );
+
+  const { filteredPeople, filteredRelationships, connections, centerPerson, personFamilyColor } = data;
+
+  if (filteredPeople.length === 0) return { nodes, edges };
+
+  // Calculate positions based on layout type
+  let positions: Map<string, { x: number; y: number }>;
+  switch (layoutType) {
+    case "hierarchical":
+      positions = calculateHierarchicalPositions(filteredPeople, connections, centerPerson);
+      break;
+    case "force":
+      positions = calculateForcePositions(filteredPeople, connections, centerPerson);
+      break;
+    case "radial":
+    default:
+      positions = calculateRadialPositions(filteredPeople, connections, centerPerson);
+      break;
+  }
+
+  // Create nodes
+  filteredPeople.forEach((person) => {
+    const pos = positions.get(person.id) || { x: 400, y: 300 };
+    nodes.push({
+      id: person.id,
+      type: "person",
+      position: pos,
+      data: {
+        person,
+        hasRelationships: filteredRelationships.some(
+          (r) => r.personAId === person.id || r.personBId === person.id
+        ),
+        familyColorIndex: personFamilyColor.get(person.id),
+        isMe: person.id === primaryUserId,
+      } as PersonNodeData,
     });
   });
 
   // Create edges
   filteredRelationships.forEach((r) => {
     const config = RELATIONSHIP_CONFIG[r.type as keyof typeof RELATIONSHIP_CONFIG];
-    const hexColor = getTailwindHex(config?.color || "bg-gray-400");
+    const hexColor = getRelationshipHex(r.type as RelationshipType, relationshipColors);
 
     edges.push({
       id: r.id,
@@ -318,10 +510,11 @@ function calculateLayout(
 interface FamilyGraphInnerProps {
   selectedFamilyId: string | null;
   onFamilyGroupsChange: (groups: FamilyGroup[]) => void;
+  layoutType: GraphLayoutType;
 }
 
 // Inner component that uses React Flow (client-side only)
-function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange }: FamilyGraphInnerProps) {
+function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }: FamilyGraphInnerProps) {
   const { people, relationships, settings } = useDataStore();
 
   // Get colors from settings (ensure non-empty array)
@@ -331,6 +524,9 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange }: FamilyGrap
 
   // Get primary user ID ("Me")
   const primaryUserId = settings.primaryUserId;
+
+  // Get relationship colors from settings
+  const relationshipColors = settings.relationshipColors;
 
   // Detect family groups
   const familyGroups = useMemo(
@@ -345,8 +541,8 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange }: FamilyGrap
 
   // Calculate initial layout
   const initialLayout = useMemo(
-    () => calculateLayout(people, relationships, familyGroups, selectedFamilyId, primaryUserId),
-    [people, relationships, familyGroups, selectedFamilyId, primaryUserId]
+    () => calculateLayout(people, relationships, familyGroups, selectedFamilyId, primaryUserId, relationshipColors, layoutType),
+    [people, relationships, familyGroups, selectedFamilyId, primaryUserId, relationshipColors, layoutType]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialLayout.nodes);
@@ -354,14 +550,14 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange }: FamilyGrap
 
   // Update layout when data changes
   useEffect(() => {
-    const layout = calculateLayout(people, relationships, familyGroups, selectedFamilyId, primaryUserId);
+    const layout = calculateLayout(people, relationships, familyGroups, selectedFamilyId, primaryUserId, relationshipColors, layoutType);
     setNodes(layout.nodes);
     setEdges(layout.edges);
-  }, [people, relationships, familyGroups, selectedFamilyId, primaryUserId, setNodes, setEdges]);
+  }, [people, relationships, familyGroups, selectedFamilyId, primaryUserId, relationshipColors, layoutType, setNodes, setEdges]);
 
   if (people.length === 0) {
     return (
-      <div className="h-[600px] rounded-lg border bg-muted/50 flex items-center justify-center">
+      <div className="h-[400px] sm:h-[500px] lg:h-[600px] rounded-lg border bg-muted/50 flex items-center justify-center">
         <p className="text-muted-foreground">Add some people to see the relationship graph</p>
       </div>
     );
@@ -369,7 +565,7 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange }: FamilyGrap
 
   return (
     <ColorsContext.Provider value={colors}>
-      <div className="h-[600px] rounded-lg border overflow-hidden">
+      <div className="h-[400px] sm:h-[500px] lg:h-[600px] rounded-lg border overflow-hidden">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -395,12 +591,14 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange }: FamilyGrap
 interface FamilyGraphProps {
   selectedFamilyId?: string | null;
   onFamilyGroupsChange?: (groups: FamilyGroup[]) => void;
+  layoutType?: GraphLayoutType;
 }
 
 // Wrapper that handles client-side only rendering
 export function FamilyGraph({
   selectedFamilyId = null,
-  onFamilyGroupsChange
+  onFamilyGroupsChange,
+  layoutType = "radial"
 }: FamilyGraphProps) {
   const [isClient, setIsClient] = useState(() => typeof window !== "undefined");
 
@@ -419,7 +617,7 @@ export function FamilyGraph({
 
   if (!isClient) {
     return (
-      <div className="h-[600px] rounded-lg border bg-muted/50 flex items-center justify-center">
+      <div className="h-[400px] sm:h-[500px] lg:h-[600px] rounded-lg border bg-muted/50 flex items-center justify-center">
         <p className="text-muted-foreground">Loading graph...</p>
       </div>
     );
@@ -429,6 +627,7 @@ export function FamilyGraph({
     <FamilyGraphInner
       selectedFamilyId={selectedFamilyId}
       onFamilyGroupsChange={handleFamilyGroupsChange}
+      layoutType={layoutType}
     />
   );
 }

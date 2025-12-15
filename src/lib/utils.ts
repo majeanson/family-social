@@ -1,8 +1,33 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { RELATIONSHIP_CONFIG, type RelationshipType } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
+}
+
+/**
+ * Get relationship color from settings or default config
+ */
+export function getRelationshipColor(
+  type: RelationshipType,
+  customColors?: Record<string, string>
+): string {
+  if (customColors && customColors[type]) {
+    return customColors[type];
+  }
+  return RELATIONSHIP_CONFIG[type]?.color || "bg-gray-400";
+}
+
+/**
+ * Get hex color for relationship from settings or default
+ */
+export function getRelationshipHex(
+  type: RelationshipType,
+  customColors?: Record<string, string>
+): string {
+  const colorClass = getRelationshipColor(type, customColors);
+  return getTailwindHex(colorClass);
 }
 
 /**
@@ -39,12 +64,16 @@ export const TAILWIND_COLORS: Record<string, string> = {
   "teal-500": "#14b8a6",
   // Greens
   "green-500": "#22c55e",
+  // Emeralds
+  "emerald-500": "#10b981",
   // Ambers
   "amber-500": "#f59e0b",
   // Oranges
   "orange-500": "#f97316",
   // Roses
   "rose-500": "#f43f5e",
+  // Reds
+  "red-500": "#ef4444",
   // Grays
   "gray-400": "#9ca3af",
   "gray-500": "#6b7280",
@@ -81,4 +110,28 @@ export const COLOR_OPTIONS = [
   { name: "Teal", bg: "bg-teal-500", hex: "#14b8a6", light: "bg-teal-50 dark:bg-teal-950/50", border: "border-teal-200 dark:border-teal-800" },
   { name: "Red", bg: "bg-red-500", hex: "#ef4444", light: "bg-red-50 dark:bg-red-950/50", border: "border-red-200 dark:border-red-800" },
   { name: "Green", bg: "bg-green-500", hex: "#22c55e", light: "bg-green-50 dark:bg-green-950/50", border: "border-green-200 dark:border-green-800" },
+];
+
+/**
+ * Relationship color options (simpler, just bg class needed)
+ */
+export const RELATIONSHIP_COLOR_OPTIONS = [
+  { name: "Blue", bg: "bg-blue-500" },
+  { name: "Blue Light", bg: "bg-blue-400" },
+  { name: "Blue Dark", bg: "bg-blue-600" },
+  { name: "Pink", bg: "bg-pink-500" },
+  { name: "Pink Light", bg: "bg-pink-400" },
+  { name: "Purple", bg: "bg-purple-500" },
+  { name: "Purple Light", bg: "bg-purple-400" },
+  { name: "Indigo", bg: "bg-indigo-500" },
+  { name: "Indigo Light", bg: "bg-indigo-400" },
+  { name: "Violet", bg: "bg-violet-500" },
+  { name: "Cyan", bg: "bg-cyan-500" },
+  { name: "Teal", bg: "bg-teal-500" },
+  { name: "Green", bg: "bg-green-500" },
+  { name: "Amber", bg: "bg-amber-500" },
+  { name: "Orange", bg: "bg-orange-500" },
+  { name: "Rose", bg: "bg-rose-500" },
+  { name: "Red", bg: "bg-red-500" },
+  { name: "Gray", bg: "bg-gray-500" },
 ];
