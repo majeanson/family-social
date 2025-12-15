@@ -13,21 +13,22 @@ export interface FamilyGroup {
   colorIndex: number;
 }
 
+// Family relationship types that connect family members
+const FAMILY_REL_TYPES = new Set([
+  "parent", "child", "sibling", "spouse", "partner",
+  "grandparent", "grandchild", "aunt_uncle", "niece_nephew",
+  "cousin", "in_law", "step_family"
+]);
+
 /**
  * Detect family groups using Union-Find algorithm.
  * People connected by family relationships are grouped together.
+ * Exported for use in graph component layout calculations.
  */
-function detectFamilyGroups(
+export function detectFamilyGroups(
   people: Person[],
   relationships: Relationship[]
 ): FamilyGroup[] {
-  // Family relationship types that connect family members
-  const familyRelTypes = new Set([
-    "parent", "child", "sibling", "spouse", "partner",
-    "grandparent", "grandchild", "aunt_uncle", "niece_nephew",
-    "cousin", "in_law", "step_family"
-  ]);
-
   // Union-Find data structure
   const parent = new Map<string, string>();
   const rank = new Map<string, number>();
@@ -65,7 +66,7 @@ function detectFamilyGroups(
 
   // Union people connected by family relationships
   relationships.forEach(rel => {
-    if (familyRelTypes.has(rel.type)) {
+    if (FAMILY_REL_TYPES.has(rel.type)) {
       union(rel.personAId, rel.personBId);
     }
   });
@@ -107,8 +108,10 @@ function detectFamilyGroups(
 export function useFamilyGroups() {
   const { people, relationships, settings } = useDataStore();
 
-  // Use colors from settings or defaults
-  const colors = settings.familyColors || DEFAULT_FAMILY_COLORS;
+  // Use colors from settings or defaults (ensure non-empty array)
+  const colors = (settings.familyColors && settings.familyColors.length > 0)
+    ? settings.familyColors
+    : DEFAULT_FAMILY_COLORS;
 
   const familyGroups = useMemo(
     () => detectFamilyGroups(people, relationships),

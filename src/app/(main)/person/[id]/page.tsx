@@ -11,7 +11,7 @@ import { RELATIONSHIP_CONFIG } from "@/types";
 import { getBirthdayInfo } from "@/lib/date-utils";
 import { EditPersonDialog } from "@/components/people/edit-person-dialog";
 import { FamilyBadge } from "@/components/people/family-badge";
-import { useFamilyGroups } from "@/features/use-family-groups";
+import { useFamilyGroups, usePrimaryUser } from "@/features";
 import {
   ArrowLeft,
   Cake,
@@ -23,7 +23,9 @@ import {
   ArrowRight,
   Edit,
   Network,
+  Crown,
 } from "lucide-react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { getInitials, cn } from "@/lib/utils";
 
@@ -35,11 +37,21 @@ export default function PersonProfilePage({ params }: PageProps) {
   const { id } = use(params);
   const { people, relationships } = useDataStore();
   const { getFamilyGroup, getFamilyColor } = useFamilyGroups();
+  const { me, isMe, setAsMe, getMyRelationshipTo } = usePrimaryUser();
   const [showEditDialog, setShowEditDialog] = useState(false);
 
   const person = useMemo(() => people.find((p) => p.id === id), [people, id]);
   const family = person ? getFamilyGroup(person.id) : null;
   const familyColor = person ? getFamilyColor(person.id) : null;
+  const isThisPersonMe = person ? isMe(person.id) : false;
+  const myRelationshipLabel = person && me && !isThisPersonMe ? getMyRelationshipTo(person) : null;
+
+  const handleSetAsMe = () => {
+    if (person) {
+      setAsMe(person.id);
+      toast.success(`${person.firstName} is now set as "Me"!`);
+    }
+  };
 
   // Get all relationships for this person
   const personRelationships = useMemo(() => {
@@ -128,14 +140,33 @@ export default function PersonProfilePage({ params }: PageProps) {
             <div className="flex-1 space-y-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold">
-                    {person.firstName} {person.lastName}
-                  </h1>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-3xl font-bold">
+                      {person.firstName} {person.lastName}
+                    </h1>
+                    {isThisPersonMe && (
+                      <Badge className="gap-1 bg-amber-500 hover:bg-amber-600">
+                        <Crown className="h-3 w-3" />
+                        Me
+                      </Badge>
+                    )}
+                  </div>
                   {person.nickname && (
                     <p className="text-lg text-muted-foreground">&quot;{person.nickname}&quot;</p>
                   )}
+                  {myRelationshipLabel && (
+                    <p className="text-sm text-primary font-medium">
+                      My {myRelationshipLabel.toLowerCase()}
+                    </p>
+                  )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap justify-end">
+                  {!isThisPersonMe && (
+                    <Button variant="outline" onClick={handleSetAsMe} title="Set this person as Me">
+                      <Crown className="h-4 w-4 mr-2" />
+                      Set as Me
+                    </Button>
+                  )}
                   {family && (
                     <Button variant="outline" asChild>
                       <Link href={`/graph?family=${family.id}`}>

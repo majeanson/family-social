@@ -75,6 +75,11 @@ interface DataState {
 
   // Actions - Settings
   updateSettings: (updates: Partial<AppSettings>) => void;
+
+  // Actions - Primary User ("Me")
+  setPrimaryUser: (personId: string) => void;
+  clearPrimaryUser: () => void;
+  getPrimaryUser: () => Person | undefined;
 }
 
 export const useDataStore = create<DataState>()(
@@ -334,6 +339,27 @@ export const useDataStore = create<DataState>()(
         state.settings = { ...state.settings, ...updates };
         state.hasUnsavedChanges = true;
       });
+    },
+
+    // Primary User ("Me") actions
+    setPrimaryUser: (personId) => {
+      set((state) => {
+        state.settings.primaryUserId = personId;
+        state.hasUnsavedChanges = true;
+      });
+    },
+
+    clearPrimaryUser: () => {
+      set((state) => {
+        state.settings.primaryUserId = undefined;
+        state.hasUnsavedChanges = true;
+      });
+    },
+
+    getPrimaryUser: () => {
+      const state = get();
+      if (!state.settings.primaryUserId) return undefined;
+      return state.people.find((p) => p.id === state.settings.primaryUserId);
     },
   }))
 );

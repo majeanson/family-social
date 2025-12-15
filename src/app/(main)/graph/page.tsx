@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useDataStore } from "@/stores/data-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,13 +20,41 @@ import { GitBranch, Users, ArrowRight, LayoutGrid, Network, Filter, X } from "lu
 import Link from "next/link";
 import { FamilyGraph, type FamilyGroup } from "@/components/graph";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getInitials, FAMILY_COLORS } from "@/lib/utils";
+import { getInitials } from "@/lib/utils";
+import { DEFAULT_FAMILY_COLORS } from "@/types";
 
 export default function GraphPage() {
-  const { people, relationships } = useDataStore();
+  const { people, relationships, settings } = useDataStore();
+
+  // Get colors from settings (ensure non-empty array)
+  const familyColors = (settings.familyColors && settings.familyColors.length > 0)
+    ? settings.familyColors
+    : DEFAULT_FAMILY_COLORS;
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"graph" | "list">("graph");
   const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(null);
   const [familyGroups, setFamilyGroups] = useState<FamilyGroup[]>([]);
+
+  // Read family filter from URL on mount
+  useEffect(() => {
+    const familyParam = searchParams.get("family");
+    if (familyParam) {
+      setSelectedFamilyId(familyParam);
+    }
+  }, [searchParams]);
+
+  // Update URL when family selection changes
+  const handleFamilyChange = useCallback((familyId: string | null) => {
+    setSelectedFamilyId(familyId);
+    const params = new URLSearchParams(searchParams.toString());
+    if (familyId) {
+      params.set("family", familyId);
+    } else {
+      params.delete("family");
+    }
+    router.replace(`/graph?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
 
   const handleFamilyGroupsChange = useCallback((groups: FamilyGroup[]) => {
     setFamilyGroups(groups);
@@ -158,7 +187,7 @@ export default function GraphPage() {
               <Filter className="h-4 w-4 text-muted-foreground" />
               <Select
                 value={selectedFamilyId || "all"}
-                onValueChange={(v) => setSelectedFamilyId(v === "all" ? null : v)}
+                onValueChange={(v) => handleFamilyChange(v === "all" ? null : v)}
               >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Filter by family..." />
@@ -166,7 +195,7 @@ export default function GraphPage() {
                 <SelectContent>
                   <SelectItem value="all">All Families</SelectItem>
                   {familyGroups.map((group) => {
-                    const color = FAMILY_COLORS[group.colorIndex % FAMILY_COLORS.length];
+                    const color = familyColors[group.colorIndex % familyColors.length];
                     return (
                       <SelectItem key={group.id} value={group.id}>
                         <div className="flex items-center gap-2">
@@ -185,7 +214,7 @@ export default function GraphPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setSelectedFamilyId(null)}
+                  onClick={() => handleFamilyChange(null)}
                   className="h-8 w-8"
                 >
                   <X className="h-4 w-4" />
@@ -199,12 +228,13 @@ export default function GraphPage() {
         {activeTab === "graph" && !selectedFamilyId && familyGroups.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-4">
             {familyGroups.map((group) => {
-              const color = FAMILY_COLORS[group.colorIndex % FAMILY_COLORS.length];
+              const color = familyColors[group.colorIndex % familyColors.length];
               return (
                 <button
                   key={group.id}
-                  onClick={() => setSelectedFamilyId(group.id)}
-                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border transition-colors hover:opacity-80 ${color.light} ${color.border}`}
+                  onClick={() => handleFamilyChange(group.id)}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border transition-colors hover:opacity-80 cursor-pointer ${color.light} ${color.border}`}
+                  title="Click to filter by this family"
                 >
                   <div className={`w-2.5 h-2.5 rounded-full ${color.bg}`} />
                   <span className="font-medium">{group.name}</span>
@@ -221,14 +251,14 @@ export default function GraphPage() {
         {activeTab === "graph" && selectedFamily && (
           <div className="flex items-center gap-3 mt-4 p-3 rounded-lg bg-muted/50">
             <div
-              className={`w-4 h-4 rounded-full ${FAMILY_COLORS[selectedFamily.colorIndex % FAMILY_COLORS.length].bg}`}
+              className={`w-4 h-4 rounded-full ${familyColors[selectedFamily.colorIndex % familyColors.length].bg}`}
             />
             <span className="font-medium">Viewing: {selectedFamily.name}</span>
             <Badge variant="secondary">{selectedFamily.memberIds.size} members</Badge>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setSelectedFamilyId(null)}
+              onClick={() => handleFamilyChange(null)}
               className="ml-auto"
             >
               Show All

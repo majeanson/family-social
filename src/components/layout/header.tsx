@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, GitBranch, FileText, Settings, Menu } from "lucide-react";
+import { Users, GitBranch, FileText, Settings, Menu, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 
 const navigation = [
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "People", href: "/", icon: Users },
   { name: "Graph", href: "/graph", icon: GitBranch },
   { name: "Forms", href: "/forms", icon: FileText },

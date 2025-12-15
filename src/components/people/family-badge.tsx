@@ -3,24 +3,34 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { FamilyGroup } from "@/features/use-family-groups";
-import { FAMILY_COLORS } from "@/lib/utils";
+import { useDataStore } from "@/stores/data-store";
+import { DEFAULT_FAMILY_COLORS, type FamilyColorConfig } from "@/types";
 
 interface FamilyBadgeProps {
   family: FamilyGroup | null;
   size?: "sm" | "default";
   showCount?: boolean;
   className?: string;
+  colors?: FamilyColorConfig[];
 }
 
 export function FamilyBadge({
   family,
   size = "default",
   showCount = false,
-  className
+  className,
+  colors: propColors
 }: FamilyBadgeProps) {
+  const { settings } = useDataStore();
+
   if (!family) return null;
 
-  const color = FAMILY_COLORS[family.colorIndex % FAMILY_COLORS.length];
+  // Use prop colors, then settings colors, then defaults (ensure non-empty array)
+  const settingsColors = (settings.familyColors && settings.familyColors.length > 0)
+    ? settings.familyColors
+    : DEFAULT_FAMILY_COLORS;
+  const colors = propColors || settingsColors;
+  const color = colors[family.colorIndex % colors.length];
 
   return (
     <Badge
@@ -46,12 +56,20 @@ interface FamilyDotProps {
   family: FamilyGroup | null;
   size?: "sm" | "md" | "lg";
   className?: string;
+  colors?: FamilyColorConfig[];
 }
 
-export function FamilyDot({ family, size = "md", className }: FamilyDotProps) {
+export function FamilyDot({ family, size = "md", className, colors: propColors }: FamilyDotProps) {
+  const { settings } = useDataStore();
+
   if (!family) return null;
 
-  const color = FAMILY_COLORS[family.colorIndex % FAMILY_COLORS.length];
+  // Use prop colors, then settings colors, then defaults (ensure non-empty array)
+  const settingsColors = (settings.familyColors && settings.familyColors.length > 0)
+    ? settings.familyColors
+    : DEFAULT_FAMILY_COLORS;
+  const colors = propColors || settingsColors;
+  const color = colors[family.colorIndex % colors.length];
   const sizeClasses = {
     sm: "h-2 w-2",
     md: "h-3 w-3",

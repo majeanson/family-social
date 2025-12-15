@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useDataStore } from "@/stores/data-store";
-import { useFamilyGroups, FAMILY_COLORS } from "@/features/use-family-groups";
+import { useFamilyGroups } from "@/features/use-family-groups";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,7 @@ import { Users, Calendar, Phone, Mail, ArrowUpRight, Sparkles } from "lucide-rea
 
 export function QuickReview() {
   const { people, relationships } = useDataStore();
-  const { familyGroups, getFamilyColor } = useFamilyGroups();
+  const { familyGroups, getFamilyColor, colors } = useFamilyGroups();
   const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(
     familyGroups.length > 0 ? familyGroups[0].id : null
   );
@@ -75,7 +75,7 @@ export function QuickReview() {
   }
 
   const familyColor = selectedFamily
-    ? FAMILY_COLORS[selectedFamily.colorIndex % FAMILY_COLORS.length]
+    ? colors[selectedFamily.colorIndex % colors.length]
     : null;
 
   return (
@@ -101,7 +101,7 @@ export function QuickReview() {
             <SelectContent>
               <SelectItem value="all">All People</SelectItem>
               {familyGroups.map((group) => {
-                const color = FAMILY_COLORS[group.colorIndex % FAMILY_COLORS.length];
+                const color = colors[group.colorIndex % colors.length];
                 return (
                   <SelectItem key={group.id} value={group.id}>
                     <div className="flex items-center gap-2">

@@ -25,6 +25,7 @@ export interface AppSettings {
   sortOrder: "asc" | "desc";
   familyColors?: FamilyColorConfig[];
   relationshipColors?: Record<string, string>;
+  primaryUserId?: string; // ID of the "Me" person
 }
 
 // Default family color palette
