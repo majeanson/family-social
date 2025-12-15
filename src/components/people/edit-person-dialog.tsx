@@ -17,6 +17,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { PhotoUpload } from "@/components/ui/photo-upload";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { X, Plus, Trash2 } from "lucide-react";
 import type { Person } from "@/types";
@@ -382,22 +389,25 @@ function EditPersonFormContent({
           {/* Add new relationship */}
           {availablePeople.length > 0 && (
             <div className="flex gap-2">
-              <select
+              <Select
                 value={newRelationshipPersonId}
-                onChange={(e) => setNewRelationshipPersonId(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onValueChange={setNewRelationshipPersonId}
               >
-                <option value="">Select person...</option>
-                {availablePeople.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.firstName} {p.lastName}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select person..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availablePeople.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.firstName} {p.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="w-40">
                 <RelationshipSelector
                   value={newRelationshipType}
-                  onChange={setNewRelationshipType}
+                  onValueChange={setNewRelationshipType}
                 />
               </div>
               <Button
