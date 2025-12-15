@@ -24,7 +24,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { DEFAULT_FORM_FIELDS, type FormField } from "@/types";
+import { DEFAULT_FORM_FIELDS, type FormField, type FormTemplate } from "@/types";
+import { generateShareableUrl } from "@/lib/form-encoding";
 import {
   FileText,
   Plus,
@@ -79,10 +80,15 @@ export default function FormsPage() {
     );
   };
 
-  const copyShareLink = (formId: string) => {
-    const url = `${window.location.origin}/share/${formId}`;
+  const copyShareLink = (template: FormTemplate) => {
+    const url = generateShareableUrl(template);
     navigator.clipboard.writeText(url);
-    toast.success("Link copied to clipboard!");
+    toast.success("Link copied to clipboard! Anyone with this link can fill out the form.");
+  };
+
+  const openPreview = (template: FormTemplate) => {
+    const url = generateShareableUrl(template);
+    window.open(url, "_blank");
   };
 
   const handleDelete = (id: string) => {
@@ -161,7 +167,7 @@ export default function FormsPage() {
                     variant="outline"
                     size="sm"
                     className="flex-1"
-                    onClick={() => copyShareLink(template.id)}
+                    onClick={() => copyShareLink(template)}
                   >
                     <Copy className="mr-2 h-3.5 w-3.5" />
                     Copy Link
@@ -169,9 +175,7 @@ export default function FormsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() =>
-                      window.open(`/share/${template.id}`, "_blank")
-                    }
+                    onClick={() => openPreview(template)}
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                   </Button>
