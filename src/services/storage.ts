@@ -1,9 +1,18 @@
 import { get, set, del } from "idb-keyval";
 import type { DataStore } from "@/types";
 import { DATA_STORE_VERSION } from "@/types";
+import { validateDataStore, hasValidStructure } from "@/lib/validation";
 
 const FILE_HANDLE_KEY = "family-data-file-handle";
 const DATA_KEY = "family-data";
+
+// Storage error types for better handling
+export type StorageErrorType = "quota_exceeded" | "private_browsing" | "permission_denied" | "unknown";
+
+export interface StorageError {
+  type: StorageErrorType;
+  message: string;
+}
 
 export interface StorageAdapter {
   isAvailable(): boolean;
@@ -11,6 +20,7 @@ export interface StorageAdapter {
   write(data: DataStore): Promise<boolean>;
   clear(): Promise<void>;
   getStorageType(): "file" | "indexeddb";
+  getLastError?(): StorageError | null;
 }
 
 // Check if File System Access API is available
@@ -141,8 +151,41 @@ class FileSystemStorageAdapter implements StorageAdapter {
   }
 }
 
+// Detect specific storage error types
+function detectStorageError(error: unknown): StorageError {
+  if (error instanceof DOMException) {
+    // QuotaExceededError
+    if (error.name === "QuotaExceededError" || error.code === 22) {
+      return {
+        type: "quota_exceeded",
+        message: "Storage quota exceeded. Please delete some data or export and clear old data.",
+      };
+    }
+    // Private browsing mode in some browsers
+    if (error.name === "InvalidStateError") {
+      return {
+        type: "private_browsing",
+        message: "Storage is unavailable in private browsing mode. Please use a regular browser window.",
+      };
+    }
+    // Permission denied
+    if (error.name === "NotAllowedError") {
+      return {
+        type: "permission_denied",
+        message: "Storage access was denied. Please check your browser settings.",
+      };
+    }
+  }
+  return {
+    type: "unknown",
+    message: "Failed to access storage. Please try again.",
+  };
+}
+
 // IndexedDB adapter (fallback for iOS and unsupported browsers)
 class IndexedDBStorageAdapter implements StorageAdapter {
+  private lastError: StorageError | null = null;
+
   isAvailable(): boolean {
     return typeof window !== "undefined" && "indexedDB" in window;
   }
@@ -151,26 +194,42 @@ class IndexedDBStorageAdapter implements StorageAdapter {
     return "indexeddb";
   }
 
+  getLastError(): StorageError | null {
+    return this.lastError;
+  }
+
   async read(): Promise<DataStore | null> {
     try {
+      this.lastError = null;
       const data = await get<DataStore>(DATA_KEY);
       return data || null;
-    } catch {
+    } catch (error) {
+      this.lastError = detectStorageError(error);
+      console.error("IndexedDB read error:", this.lastError.message);
       return null;
     }
   }
 
   async write(data: DataStore): Promise<boolean> {
     try {
+      this.lastError = null;
       await set(DATA_KEY, data);
       return true;
-    } catch {
+    } catch (error) {
+      this.lastError = detectStorageError(error);
+      console.error("IndexedDB write error:", this.lastError.message);
       return false;
     }
   }
 
   async clear(): Promise<void> {
-    await del(DATA_KEY);
+    try {
+      this.lastError = null;
+      await del(DATA_KEY);
+    } catch (error) {
+      this.lastError = detectStorageError(error);
+      console.error("IndexedDB clear error:", this.lastError.message);
+    }
   }
 }
 
@@ -198,18 +257,38 @@ export function downloadJSON(data: DataStore, filename = "family-data.json"): vo
   URL.revokeObjectURL(url);
 }
 
-export async function importFromFile(file: File): Promise<DataStore | null> {
+export interface ImportResult {
+  success: boolean;
+  data?: DataStore;
+  error?: string;
+}
+
+export async function importFromFile(file: File): Promise<ImportResult> {
   try {
     const text = await file.text();
-    const data = JSON.parse(text) as DataStore;
+    let parsed: unknown;
 
-    if (!data.version || !Array.isArray(data.people)) {
-      throw new Error("Invalid data format");
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return { success: false, error: "Invalid JSON format" };
     }
 
-    return data;
+    // Quick structure check first
+    if (!hasValidStructure(parsed)) {
+      return { success: false, error: "Missing required fields (version, people)" };
+    }
+
+    // Full validation with Zod
+    const validation = validateDataStore(parsed);
+
+    if (!validation.success) {
+      return { success: false, error: validation.error };
+    }
+
+    return { success: true, data: validation.data as DataStore };
   } catch {
-    return null;
+    return { success: false, error: "Failed to read file" };
   }
 }
 

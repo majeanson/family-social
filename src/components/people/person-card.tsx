@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +22,7 @@ interface PersonCardProps {
   person: Person;
 }
 
-export function PersonCard({ person }: PersonCardProps) {
+export const PersonCard = memo(function PersonCard({ person }: PersonCardProps) {
   const { relationships, people, settings } = useDataStore();
   const { getFamilyGroup, getFamilyColor } = useFamilyGroups();
   const { isMe } = usePrimaryUser();
@@ -173,4 +174,4 @@ export function PersonCard({ person }: PersonCardProps) {
       </Card>
     </Link>
   );
-}
+});

@@ -55,7 +55,7 @@ export default function PersonProfilePage({ params }: PageProps) {
     }
   };
 
-  // Get all relationships for this person
+  // Get all relationships for this person (with type-safe filtering)
   const personRelationships = useMemo(() => {
     return relationships
       .filter((r) => r.personAId === id || r.personBId === id)
@@ -71,7 +71,9 @@ export default function PersonProfilePage({ params }: PageProps) {
           relationType,
         };
       })
-      .filter((r) => r.relatedPerson);
+      .filter((r): r is typeof r & { relatedPerson: NonNullable<typeof r.relatedPerson> } =>
+        r.relatedPerson !== undefined
+      );
   }, [relationships, people, id]);
 
   // Group relationships by type
@@ -288,20 +290,20 @@ export default function PersonProfilePage({ params }: PageProps) {
                       return (
                         <Link
                           key={relationship.id}
-                          href={`/person/${relatedPerson!.id}`}
+                          href={`/person/${relatedPerson.id}`}
                           className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                         >
                           <Avatar className="h-12 w-12">
-                            {relatedPerson!.photo && (
-                              <AvatarImage src={relatedPerson!.photo} />
+                            {relatedPerson.photo && (
+                              <AvatarImage src={relatedPerson.photo} alt={relatedPerson.firstName} />
                             )}
                             <AvatarFallback className="bg-primary/10 text-primary">
-                              {getInitials(relatedPerson!.firstName, relatedPerson!.lastName)}
+                              {getInitials(relatedPerson.firstName, relatedPerson.lastName)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">
-                              {relatedPerson!.firstName} {relatedPerson!.lastName}
+                              {relatedPerson.firstName} {relatedPerson.lastName}
                             </p>
                             <div className="flex items-center gap-1.5">
                               <span className={`h-2 w-2 rounded-full ${color}`} />
@@ -331,20 +333,20 @@ export default function PersonProfilePage({ params }: PageProps) {
                       return (
                         <Link
                           key={relationship.id}
-                          href={`/person/${relatedPerson!.id}`}
+                          href={`/person/${relatedPerson.id}`}
                           className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                         >
                           <Avatar className="h-12 w-12">
-                            {relatedPerson!.photo && (
-                              <AvatarImage src={relatedPerson!.photo} />
+                            {relatedPerson.photo && (
+                              <AvatarImage src={relatedPerson.photo} alt={relatedPerson.firstName} />
                             )}
                             <AvatarFallback className="bg-primary/10 text-primary">
-                              {getInitials(relatedPerson!.firstName, relatedPerson!.lastName)}
+                              {getInitials(relatedPerson.firstName, relatedPerson.lastName)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">
-                              {relatedPerson!.firstName} {relatedPerson!.lastName}
+                              {relatedPerson.firstName} {relatedPerson.lastName}
                             </p>
                             <div className="flex items-center gap-1.5">
                               <span className={`h-2 w-2 rounded-full ${color}`} />
@@ -374,20 +376,20 @@ export default function PersonProfilePage({ params }: PageProps) {
                       return (
                         <Link
                           key={relationship.id}
-                          href={`/person/${relatedPerson!.id}`}
+                          href={`/person/${relatedPerson.id}`}
                           className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                         >
                           <Avatar className="h-12 w-12">
-                            {relatedPerson!.photo && (
-                              <AvatarImage src={relatedPerson!.photo} />
+                            {relatedPerson.photo && (
+                              <AvatarImage src={relatedPerson.photo} alt={relatedPerson.firstName} />
                             )}
                             <AvatarFallback className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                              {getInitials(relatedPerson!.firstName, relatedPerson!.lastName)}
+                              {getInitials(relatedPerson.firstName, relatedPerson.lastName)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">
-                              {relatedPerson!.firstName} {relatedPerson!.lastName}
+                              {relatedPerson.firstName} {relatedPerson.lastName}
                             </p>
                             <div className="flex items-center gap-1.5">
                               <span className={`h-2 w-2 rounded-full ${color}`} />
@@ -417,20 +419,20 @@ export default function PersonProfilePage({ params }: PageProps) {
                       return (
                         <Link
                           key={relationship.id}
-                          href={`/person/${relatedPerson!.id}`}
+                          href={`/person/${relatedPerson.id}`}
                           className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                         >
                           <Avatar className="h-12 w-12">
-                            {relatedPerson!.photo && (
-                              <AvatarImage src={relatedPerson!.photo} />
+                            {relatedPerson.photo && (
+                              <AvatarImage src={relatedPerson.photo} alt={relatedPerson.firstName} />
                             )}
                             <AvatarFallback className="bg-muted text-muted-foreground">
-                              {getInitials(relatedPerson!.firstName, relatedPerson!.lastName)}
+                              {getInitials(relatedPerson.firstName, relatedPerson.lastName)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">
-                              {relatedPerson!.firstName} {relatedPerson!.lastName}
+                              {relatedPerson.firstName} {relatedPerson.lastName}
                             </p>
                             <div className="flex items-center gap-1.5">
                               <span className={`h-2 w-2 rounded-full ${color}`} />

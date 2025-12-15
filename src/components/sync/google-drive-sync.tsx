@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useDataStore } from "@/stores/data-store";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +37,40 @@ import {
 } from "@/services/google-drive";
 
 type SyncStatus = "idle" | "syncing" | "uploading" | "downloading" | "error";
+
+// Retry configuration
+const MAX_RETRIES = 3;
+const INITIAL_DELAY_MS = 1000;
+
+// Exponential backoff retry utility
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = MAX_RETRIES,
+  initialDelay: number = INITIAL_DELAY_MS
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Don't retry on auth errors (they need user intervention)
+      if (lastError.message.includes("auth") || lastError.message.includes("401")) {
+        throw lastError;
+      }
+
+      // Wait before retrying with exponential backoff
+      if (attempt < maxRetries - 1) {
+        const delay = initialDelay * Math.pow(2, attempt);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError || new Error("Operation failed after retries");
+}
 
 export function GoogleDriveSync() {
   const { exportData, loadData, hasUnsavedChanges } = useDataStore();
@@ -110,16 +144,19 @@ export function GoogleDriveSync() {
 
     try {
       const data = exportData();
-      const success = await uploadToDrive(data);
+      const success = await withRetry(async () => {
+        const result = await uploadToDrive(data);
+        if (!result) throw new Error("Upload failed");
+        return result;
+      });
 
       if (success) {
         setLastSyncTime(new Date());
         toast.success("Data uploaded to Google Drive!");
-      } else {
-        throw new Error("Upload failed");
       }
-    } catch {
-      setError("Failed to upload data");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to upload data";
+      setError(message.includes("auth") ? "Please reconnect to Google Drive" : "Failed to upload data. Please try again.");
       toast.error("Failed to upload to Google Drive");
     } finally {
       setSyncStatus("idle");
@@ -131,7 +168,7 @@ export function GoogleDriveSync() {
     setError(null);
 
     try {
-      const data = await downloadFromDrive();
+      const data = await withRetry(() => downloadFromDrive());
 
       if (data) {
         loadData(data);
@@ -140,8 +177,9 @@ export function GoogleDriveSync() {
       } else {
         toast.info("No data found in Google Drive");
       }
-    } catch {
-      setError("Failed to download data");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to download data";
+      setError(message.includes("auth") ? "Please reconnect to Google Drive" : "Failed to download data. Please try again.");
       toast.error("Failed to download from Google Drive");
     } finally {
       setSyncStatus("idle");
@@ -153,20 +191,28 @@ export function GoogleDriveSync() {
     setError(null);
 
     try {
-      const driveTime = await getLastSyncTime();
+      const driveTime = await withRetry(() => getLastSyncTime());
       const localData = exportData();
 
       if (!driveTime) {
         // No data in Drive, upload local
-        await uploadToDrive(localData);
+        await withRetry(async () => {
+          const result = await uploadToDrive(localData);
+          if (!result) throw new Error("Upload failed");
+          return result;
+        });
         toast.success("Data synced to Google Drive!");
       } else if (hasUnsavedChanges) {
         // Local changes, upload
-        await uploadToDrive(localData);
+        await withRetry(async () => {
+          const result = await uploadToDrive(localData);
+          if (!result) throw new Error("Upload failed");
+          return result;
+        });
         toast.success("Local changes synced to Google Drive!");
       } else {
         // Download from Drive
-        const driveData = await downloadFromDrive();
+        const driveData = await withRetry(() => downloadFromDrive());
         if (driveData) {
           loadData(driveData);
           toast.success("Data synced from Google Drive!");
@@ -174,8 +220,9 @@ export function GoogleDriveSync() {
       }
 
       setLastSyncTime(new Date());
-    } catch {
-      setError("Sync failed");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Sync failed";
+      setError(message.includes("auth") ? "Please reconnect to Google Drive" : "Sync failed. Please try again.");
       toast.error("Failed to sync with Google Drive");
     } finally {
       setSyncStatus("idle");

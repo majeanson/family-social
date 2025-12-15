@@ -13,24 +13,32 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  errorId: string | null;
+}
+
+// Generate a unique error ID for user reference without exposing details
+function generateErrorId(): string {
+  return `ERR-${Date.now().toString(36).toUpperCase()}`;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorId: null };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { hasError: true, error, errorId: generateErrorId() };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // Log full error details to console for developers only
     console.error("ErrorBoundary caught an error:", error, errorInfo);
+    console.error("Error ID:", this.state.errorId);
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState({ hasError: false, error: null, errorId: null });
   };
 
   render() {
@@ -52,10 +60,10 @@ export class ErrorBoundary extends Component<Props, State> {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {this.state.error && (
-                <div className="bg-muted rounded-md p-3 text-sm font-mono text-muted-foreground overflow-auto max-h-24">
-                  {this.state.error.message}
-                </div>
+              {this.state.errorId && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Reference: {this.state.errorId}
+                </p>
               )}
               <div className="flex gap-2">
                 <Button onClick={this.handleRetry} className="flex-1">

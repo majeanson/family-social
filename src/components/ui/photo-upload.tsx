@@ -108,6 +108,7 @@ export function PhotoUpload({
           className="h-8 w-8 rounded-full shadow-md"
           onClick={triggerFileSelect}
           disabled={isLoading}
+          aria-label={value ? "Change photo" : "Upload photo"}
         >
           {value ? (
             <Camera className="h-4 w-4" />
@@ -124,6 +125,7 @@ export function PhotoUpload({
             className="h-8 w-8 rounded-full shadow-md"
             onClick={handleRemove}
             disabled={isLoading}
+            aria-label="Remove photo"
           >
             <X className="h-4 w-4" />
           </Button>

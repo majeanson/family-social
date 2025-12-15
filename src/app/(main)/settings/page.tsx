@@ -250,12 +250,12 @@ export default function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const data = await importFromFile(file);
-    if (data) {
-      loadData(data);
+    const result = await importFromFile(file);
+    if (result.success && result.data) {
+      loadData(result.data);
       toast.success("Data imported successfully!");
     } else {
-      toast.error("Failed to import data. Please check the file format.");
+      toast.error(result.error || "Failed to import data. Please check the file format.");
     }
 
     // Reset file input
@@ -445,7 +445,7 @@ export default function SettingsPage() {
                   clearMe();
                   toast.success("Primary user cleared");
                 }}
-                title="Clear 'Me' selection"
+                aria-label="Clear 'Me' selection"
               >
                 <X className="h-4 w-4" />
               </Button>

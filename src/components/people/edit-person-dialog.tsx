@@ -148,8 +148,18 @@ function EditPersonFormContent({
   }, []);
 
   const handleConfirmDelete = useCallback(() => {
+    // Check if deleting the "Me" person
+    const { settings } = useDataStore.getState();
+    const wasPrimaryUser = settings.primaryUserId === person.id;
+
     deletePerson(person.id);
     toast.success(`${person.firstName} has been removed`);
+
+    // Notify user that their "Me" profile was cleared
+    if (wasPrimaryUser) {
+      toast.info("Your 'Me' profile has been cleared. You can set a new one in Settings.");
+    }
+
     setShowDeleteConfirm(false);
     onClose();
   }, [person.firstName, person.id, deletePerson, onClose]);
@@ -408,6 +418,7 @@ function EditPersonFormContent({
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDeleteRelationship(rel.id)}
+                      aria-label={`Remove relationship with ${relatedPerson.firstName}`}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>

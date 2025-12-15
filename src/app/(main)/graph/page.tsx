@@ -248,6 +248,7 @@ export default function GraphPage() {
                       size="icon"
                       onClick={() => handleFamilyChange(null)}
                       className="h-8 w-8"
+                      aria-label="Clear family filter"
                     >
                       <X className="h-4 w-4" />
                     </Button>
