@@ -43,9 +43,14 @@ import {
   Sun,
   Moon,
   Monitor,
+  Palette,
+  RotateCcw,
 } from "lucide-react";
-import type { AppSettings, PersonFormData } from "@/types";
+import type { AppSettings, PersonFormData, FamilyColorConfig } from "@/types";
+import { DEFAULT_FAMILY_COLORS, RELATIONSHIP_CONFIG } from "@/types";
 import { GoogleDriveSync } from "@/components/sync/google-drive-sync";
+import { useFamilyGroups } from "@/features/use-family-groups";
+import { COLOR_OPTIONS } from "@/lib/utils";
 
 // Parse text format response (from Copy Text / Native Share)
 function parseTextResponse(text: string): PersonFormData | null {
@@ -128,9 +133,25 @@ export default function SettingsPage() {
     formTemplates,
     lastSaved,
   } = useDataStore();
+  const { familyGroups } = useFamilyGroups();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const responseFileInputRef = useRef<HTMLInputElement>(null);
   const [pastedResponse, setPastedResponse] = useState("");
+
+  // Get current family colors from settings or defaults
+  const familyColors = settings.familyColors || DEFAULT_FAMILY_COLORS;
+
+  const handleChangeFamilyColor = (index: number, newColor: FamilyColorConfig) => {
+    const newColors = [...familyColors];
+    newColors[index] = newColor;
+    updateSettings({ familyColors: newColors });
+    toast.success("Family color updated!");
+  };
+
+  const handleResetColors = () => {
+    updateSettings({ familyColors: DEFAULT_FAMILY_COLORS });
+    toast.success("Colors reset to defaults");
+  };
 
   const handleExport = () => {
     const data = exportData();
@@ -453,6 +474,110 @@ Examples:
                   <SelectItem value="createdAt">Recently Added</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Color Customization */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5" />
+            Color Customization
+          </CardTitle>
+          <CardDescription>
+            Customize colors for family groups and relationships
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Family Colors */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-base">Family Group Colors</Label>
+              <Button variant="ghost" size="sm" onClick={handleResetColors}>
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reset to Default
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Colors are assigned to families in order. Family #{1} gets color 1, etc.
+            </p>
+
+            <div className="grid gap-3">
+              {familyColors.slice(0, 8).map((color, index) => {
+                const family = familyGroups[index];
+                return (
+                  <div
+                    key={index}
+                    className="flex items-center gap-4 p-3 rounded-lg border bg-muted/30"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className={`w-8 h-8 rounded-full ${color.bg} flex-shrink-0`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium">
+                          {family ? family.name : `Family Color #${index + 1}`}
+                        </p>
+                        {family && (
+                          <p className="text-xs text-muted-foreground">
+                            {family.memberIds.size} members
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <Select
+                      value={color.bg}
+                      onValueChange={(value) => {
+                        const newColor = COLOR_OPTIONS.find((c) => c.bg === value);
+                        if (newColor) {
+                          handleChangeFamilyColor(index, {
+                            bg: newColor.bg,
+                            hex: newColor.hex,
+                            light: newColor.light,
+                            border: newColor.border,
+                          });
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COLOR_OPTIONS.map((option) => (
+                          <SelectItem key={option.bg} value={option.bg}>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-4 h-4 rounded-full ${option.bg}`} />
+                              <span>{option.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Relationship Colors Info */}
+          <div className="space-y-4">
+            <Label className="text-base">Relationship Colors</Label>
+            <p className="text-sm text-muted-foreground">
+              Relationship colors are predefined based on relationship type.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(RELATIONSHIP_CONFIG).slice(0, 8).map(([type, config]) => (
+                <Badge
+                  key={type}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <span className={`w-3 h-3 rounded-full ${config.color}`} />
+                  {config.label}
+                </Badge>
+              ))}
             </div>
           </div>
         </CardContent>

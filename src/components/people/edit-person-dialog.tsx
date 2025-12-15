@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useDataStore } from "@/stores/data-store";
 import { Button } from "@/components/ui/button";
 import {
@@ -162,14 +162,14 @@ function EditPersonFormContent({
   }, [deleteRelationship]);
 
   // Get available people for new relationship (excluding self and already connected)
-  const availablePeople = people.filter((p) => {
+  const availablePeople = useMemo(() => people.filter((p) => {
     if (p.id === person.id) return false;
     return !personRelationships.some(
       (r) =>
         (r.personAId === person.id && r.personBId === p.id) ||
         (r.personAId === p.id && r.personBId === person.id)
     );
-  });
+  }), [people, person.id, personRelationships]);
 
   return (
     <>

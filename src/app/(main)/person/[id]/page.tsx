@@ -10,6 +10,8 @@ import { Separator } from "@/components/ui/separator";
 import { RELATIONSHIP_CONFIG } from "@/types";
 import { getBirthdayInfo } from "@/lib/date-utils";
 import { EditPersonDialog } from "@/components/people/edit-person-dialog";
+import { FamilyBadge } from "@/components/people/family-badge";
+import { useFamilyGroups } from "@/features/use-family-groups";
 import {
   ArrowLeft,
   Cake,
@@ -20,12 +22,10 @@ import {
   Users,
   ArrowRight,
   Edit,
+  Network,
 } from "lucide-react";
 import Link from "next/link";
-
-function getInitials(firstName: string, lastName: string): string {
-  return `${firstName.charAt(0)}${lastName?.charAt(0) || ""}`.toUpperCase();
-}
+import { getInitials, cn } from "@/lib/utils";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -34,9 +34,12 @@ interface PageProps {
 export default function PersonProfilePage({ params }: PageProps) {
   const { id } = use(params);
   const { people, relationships } = useDataStore();
+  const { getFamilyGroup, getFamilyColor } = useFamilyGroups();
   const [showEditDialog, setShowEditDialog] = useState(false);
 
   const person = useMemo(() => people.find((p) => p.id === id), [people, id]);
+  const family = person ? getFamilyGroup(person.id) : null;
+  const familyColor = person ? getFamilyColor(person.id) : null;
 
   // Get all relationships for this person
   const personRelationships = useMemo(() => {
@@ -99,16 +102,27 @@ export default function PersonProfilePage({ params }: PageProps) {
       </Button>
 
       {/* Profile Header */}
-      <Card>
+      <Card className={cn(familyColor && `${familyColor.light} ${familyColor.border}`)}>
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row items-start gap-6">
             {/* Avatar */}
-            <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
-              {person.photo && <AvatarImage src={person.photo} alt={person.firstName} />}
-              <AvatarFallback className="text-3xl bg-primary/10 text-primary">
-                {getInitials(person.firstName, person.lastName)}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
+                {person.photo && <AvatarImage src={person.photo} alt={person.firstName} />}
+                <AvatarFallback className={cn(
+                  "text-3xl",
+                  familyColor ? `${familyColor.bg} text-white` : "bg-primary/10 text-primary"
+                )}>
+                  {getInitials(person.firstName, person.lastName)}
+                </AvatarFallback>
+              </Avatar>
+              {familyColor && (
+                <div className={cn(
+                  "absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-4 border-background",
+                  familyColor.bg
+                )} />
+              )}
+            </div>
 
             {/* Info */}
             <div className="flex-1 space-y-3">
@@ -121,22 +135,31 @@ export default function PersonProfilePage({ params }: PageProps) {
                     <p className="text-lg text-muted-foreground">&quot;{person.nickname}&quot;</p>
                   )}
                 </div>
-                <Button variant="outline" onClick={() => setShowEditDialog(true)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
+                <div className="flex gap-2">
+                  {family && (
+                    <Button variant="outline" asChild>
+                      <Link href={`/graph?family=${family.id}`}>
+                        <Network className="h-4 w-4 mr-2" />
+                        View Family
+                      </Link>
+                    </Button>
+                  )}
+                  <Button variant="outline" onClick={() => setShowEditDialog(true)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                </div>
               </div>
 
-              {/* Tags */}
-              {person.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {person.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
+              {/* Family & Tags */}
+              <div className="flex flex-wrap gap-2">
+                {family && <FamilyBadge family={family} showCount />}
+                {person.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
 
               {/* Quick Info */}
               <div className="grid gap-3 sm:grid-cols-2">

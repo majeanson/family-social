@@ -1,25 +1,35 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useDataStore } from "@/stores/data-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RelationshipBadge } from "@/components/relationships";
 import { RELATIONSHIP_CONFIG } from "@/types";
-import { GitBranch, Users, ArrowRight, LayoutGrid, Network } from "lucide-react";
+import { GitBranch, Users, ArrowRight, LayoutGrid, Network, Filter, X } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { FamilyGraph } from "@/components/graph";
+import { FamilyGraph, type FamilyGroup } from "@/components/graph";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-function getInitials(firstName: string, lastName: string): string {
-  return `${firstName.charAt(0)}${lastName.charAt(0) || ""}`.toUpperCase();
-}
+import { getInitials, FAMILY_COLORS } from "@/lib/utils";
 
 export default function GraphPage() {
   const { people, relationships } = useDataStore();
   const [activeTab, setActiveTab] = useState<"graph" | "list">("graph");
+  const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(null);
+  const [familyGroups, setFamilyGroups] = useState<FamilyGroup[]>([]);
+
+  const handleFamilyGroupsChange = useCallback((groups: FamilyGroup[]) => {
+    setFamilyGroups(groups);
+  }, []);
 
   // Build relationship map
   const relationshipMap = useMemo(() => {
@@ -61,6 +71,9 @@ export default function GraphPage() {
       return bConnections - aConnections;
     });
   }, [people, relationshipMap]);
+
+  // Get selected family info
+  const selectedFamily = familyGroups.find(g => g.id === selectedFamilyId);
 
   if (people.length === 0) {
     return (
@@ -116,33 +129,119 @@ export default function GraphPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Most Connected
+              Family Groups
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold truncate">
-              {sortedPeople[0]?.firstName || "—"} {sortedPeople[0]?.lastName || ""}
-            </div>
+            <div className="text-3xl font-bold">{familyGroups.length}</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Tabs for Graph and List views */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "graph" | "list")}>
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="graph" className="gap-2">
-            <Network className="h-4 w-4" />
-            Interactive Graph
-          </TabsTrigger>
-          <TabsTrigger value="list" className="gap-2">
-            <LayoutGrid className="h-4 w-4" />
-            List View
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsTrigger value="graph" className="gap-2">
+              <Network className="h-4 w-4" />
+              Interactive Graph
+            </TabsTrigger>
+            <TabsTrigger value="list" className="gap-2">
+              <LayoutGrid className="h-4 w-4" />
+              List View
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Family Filter - Only show in graph tab */}
+          {activeTab === "graph" && familyGroups.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select
+                value={selectedFamilyId || "all"}
+                onValueChange={(v) => setSelectedFamilyId(v === "all" ? null : v)}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Filter by family..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Families</SelectItem>
+                  {familyGroups.map((group) => {
+                    const color = FAMILY_COLORS[group.colorIndex % FAMILY_COLORS.length];
+                    return (
+                      <SelectItem key={group.id} value={group.id}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full ${color.bg}`} />
+                          <span>{group.name}</span>
+                          <Badge variant="secondary" className="ml-auto text-xs">
+                            {group.memberIds.size}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {selectedFamilyId && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSelectedFamilyId(null)}
+                  className="h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Family Legend - Show when viewing all families */}
+        {activeTab === "graph" && !selectedFamilyId && familyGroups.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-4">
+            {familyGroups.map((group) => {
+              const color = FAMILY_COLORS[group.colorIndex % FAMILY_COLORS.length];
+              return (
+                <button
+                  key={group.id}
+                  onClick={() => setSelectedFamilyId(group.id)}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border transition-colors hover:opacity-80 ${color.light} ${color.border}`}
+                >
+                  <div className={`w-2.5 h-2.5 rounded-full ${color.bg}`} />
+                  <span className="font-medium">{group.name}</span>
+                  <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                    {group.memberIds.size}
+                  </Badge>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Selected Family Info */}
+        {activeTab === "graph" && selectedFamily && (
+          <div className="flex items-center gap-3 mt-4 p-3 rounded-lg bg-muted/50">
+            <div
+              className={`w-4 h-4 rounded-full ${FAMILY_COLORS[selectedFamily.colorIndex % FAMILY_COLORS.length].bg}`}
+            />
+            <span className="font-medium">Viewing: {selectedFamily.name}</span>
+            <Badge variant="secondary">{selectedFamily.memberIds.size} members</Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedFamilyId(null)}
+              className="ml-auto"
+            >
+              Show All
+            </Button>
+          </div>
+        )}
 
         {/* Graph View */}
         <TabsContent value="graph" className="mt-6">
-          <FamilyGraph />
+          <FamilyGraph
+            selectedFamilyId={selectedFamilyId}
+            onFamilyGroupsChange={handleFamilyGroupsChange}
+          />
           <p className="text-sm text-muted-foreground text-center mt-4">
             Click on a person to view their profile. Drag to move, scroll to zoom.
           </p>

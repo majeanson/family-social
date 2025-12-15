@@ -12,21 +12,23 @@ import { useDataStore } from "@/stores/data-store";
 import type { Person } from "@/types";
 import { RELATIONSHIP_CONFIG } from "@/types";
 import { getBirthdayInfo } from "@/lib/date-utils";
+import { getInitials, cn } from "@/lib/utils";
+import { useFamilyGroups } from "@/features/use-family-groups";
+import { FamilyBadge, FamilyDot } from "./family-badge";
 import { Calendar, Mail, Phone, StickyNote, ArrowUpRight } from "lucide-react";
 
 interface PersonCardProps {
   person: Person;
 }
 
-function getInitials(firstName: string, lastName: string): string {
-  return `${firstName.charAt(0)}${lastName?.charAt(0) || ""}`.toUpperCase();
-}
-
 export function PersonCard({ person }: PersonCardProps) {
   const { relationships, people } = useDataStore();
+  const { getFamilyGroup, getFamilyColor } = useFamilyGroups();
   const initials = getInitials(person.firstName, person.lastName);
   const birthday = getBirthdayInfo(person.birthday);
   const displayName = person.nickname || `${person.firstName} ${person.lastName}`;
+  const family = getFamilyGroup(person.id);
+  const familyColor = getFamilyColor(person.id);
 
   // Get relationships for this person
   const personRelationships = relationships
@@ -35,15 +37,26 @@ export function PersonCard({ person }: PersonCardProps) {
 
   return (
     <Link href={`/person/${person.id}`}>
-      <Card className="group cursor-pointer transition-all hover:shadow-md hover:border-primary/20 h-full">
+      <Card className={cn(
+        "group cursor-pointer transition-all hover:shadow-md h-full",
+        familyColor
+          ? `${familyColor.light} ${familyColor.border} hover:border-opacity-60`
+          : "hover:border-primary/20"
+      )}>
       <CardHeader className="pb-3">
         <div className="flex items-start gap-4">
-          <Avatar className="h-14 w-14 ring-2 ring-background shadow-sm">
-            {person.photo && <AvatarImage src={person.photo} alt={displayName} />}
-            <AvatarFallback className="text-lg font-medium bg-primary/10 text-primary">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="h-14 w-14 ring-2 ring-background shadow-sm">
+              {person.photo && <AvatarImage src={person.photo} alt={displayName} />}
+              <AvatarFallback className={cn(
+                "text-lg font-medium",
+                familyColor ? `${familyColor.bg} text-white` : "bg-primary/10 text-primary"
+              )}>
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <FamilyDot family={family} size="sm" className="absolute -bottom-0.5 -right-0.5" />
+          </div>
           <div className="flex-1 min-w-0 space-y-1">
             <h3 className="font-semibold text-base leading-tight truncate group-hover:text-primary transition-colors">
               {displayName}
@@ -53,20 +66,19 @@ export function PersonCard({ person }: PersonCardProps) {
                 {person.firstName} {person.lastName}
               </p>
             )}
-            {person.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 pt-1">
-                {person.tags.slice(0, 3).map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
-                    {tag}
-                  </Badge>
-                ))}
-                {person.tags.length > 3 && (
-                  <Badge variant="outline" className="text-xs px-1.5 py-0">
-                    +{person.tags.length - 3}
-                  </Badge>
-                )}
-              </div>
-            )}
+            <div className="flex flex-wrap gap-1 pt-1">
+              {family && <FamilyBadge family={family} size="sm" />}
+              {person.tags.slice(0, family ? 2 : 3).map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
+                  {tag}
+                </Badge>
+              ))}
+              {person.tags.length > (family ? 2 : 3) && (
+                <Badge variant="outline" className="text-xs px-1.5 py-0">
+                  +{person.tags.length - (family ? 2 : 3)}
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
       </CardHeader>
