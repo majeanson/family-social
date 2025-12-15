@@ -40,6 +40,9 @@ import {
   AlertTriangle,
   ClipboardPaste,
   UserPlus,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
 import type { AppSettings, PersonFormData } from "@/types";
 import { GoogleDriveSync } from "@/components/sync/google-drive-sync";
@@ -368,6 +371,51 @@ Examples:
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Theme Selection */}
+          <div className="space-y-3">
+            <Label>Theme</Label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => updateSettings({ theme: "light" })}
+                className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-colors ${
+                  settings.theme === "light"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/50"
+                }`}
+              >
+                <Sun className="h-5 w-5" />
+                <span className="text-sm font-medium">Light</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => updateSettings({ theme: "dark" })}
+                className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-colors ${
+                  settings.theme === "dark"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/50"
+                }`}
+              >
+                <Moon className="h-5 w-5" />
+                <span className="text-sm font-medium">Dark</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => updateSettings({ theme: "system" })}
+                className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-colors ${
+                  settings.theme === "system"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/50"
+                }`}
+              >
+                <Monitor className="h-5 w-5" />
+                <span className="text-sm font-medium">System</span>
+              </button>
+            </div>
+          </div>
+
+          <Separator />
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Default View</Label>

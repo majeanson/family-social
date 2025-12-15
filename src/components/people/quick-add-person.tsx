@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { PhotoUpload } from "@/components/ui/photo-upload";
 import {
   Select,
   SelectContent,
@@ -35,6 +36,9 @@ interface QuickAddPersonProps {
 export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
   const { addPerson, addRelationship, people } = useDataStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [photo, setPhoto] = useState<string | undefined>();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [relatedTo, setRelatedTo] = useState<string>("");
   const [relationshipType, setRelationshipType] = useState<RelationshipType | "">("");
 
@@ -43,8 +47,6 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
     setIsSubmitting(true);
 
     const formData = new FormData(e.currentTarget);
-    const firstName = formData.get("firstName") as string;
-    const lastName = (formData.get("lastName") as string) || "";
     const nickname = formData.get("nickname") as string;
     const birthday = formData.get("birthday") as string;
     const email = formData.get("email") as string;
@@ -56,8 +58,9 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
       : [];
 
     const personId = addPerson({
-      firstName,
-      lastName,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      photo,
       nickname: nickname || undefined,
       birthday: birthday || undefined,
       email: email || undefined,
@@ -74,12 +77,18 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
 
     toast.success(`${firstName}${lastName ? ` ${lastName}` : ""} added!`);
     setIsSubmitting(false);
+    setPhoto(undefined);
+    setFirstName("");
+    setLastName("");
     setRelatedTo("");
     setRelationshipType("");
     onOpenChange(false);
   };
 
   const handleClose = () => {
+    setPhoto(undefined);
+    setFirstName("");
+    setLastName("");
     setRelatedTo("");
     setRelationshipType("");
     onOpenChange(false);
@@ -102,36 +111,50 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
           <div className="space-y-6 py-6">
             {/* Name Section */}
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">
-                    First Name <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="firstName"
-                    name="firstName"
-                    required
-                    autoFocus
-                    placeholder="John"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    name="lastName"
-                    placeholder="Doe"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="nickname">Nickname</Label>
-                <Input
-                  id="nickname"
-                  name="nickname"
-                  placeholder="How you call them"
+              <div className="flex items-start gap-4">
+                <PhotoUpload
+                  value={photo}
+                  onChange={setPhoto}
+                  initials={`${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "?"}
+                  size="md"
                 />
+                <div className="flex-1 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">
+                        First Name <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="firstName"
+                        name="firstName"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                        autoFocus
+                        placeholder="John"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        name="lastName"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder="Doe"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="nickname">Nickname</Label>
+                    <Input
+                      id="nickname"
+                      name="nickname"
+                      placeholder="How you call them"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 

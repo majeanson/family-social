@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "./theme-toggle";
 
 const navigation = [
   { name: "People", href: "/", icon: Users },
@@ -48,8 +49,14 @@ export function Header() {
           </nav>
         </div>
 
+        {/* Theme toggle - desktop */}
+        <div className="hidden md:flex items-center">
+          <ThemeToggle />
+        </div>
+
         {/* Mobile menu */}
-        <div className="flex flex-1 items-center justify-end md:hidden">
+        <div className="flex flex-1 items-center justify-end gap-2 md:hidden">
+          <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">

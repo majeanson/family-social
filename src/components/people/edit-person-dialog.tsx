@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { PhotoUpload } from "@/components/ui/photo-upload";
 import { toast } from "sonner";
 import { X, Plus, Trash2 } from "lucide-react";
 import type { Person } from "@/types";
@@ -66,6 +67,7 @@ function EditPersonFormContent({
   const [firstName, setFirstName] = useState(person.firstName);
   const [lastName, setLastName] = useState(person.lastName);
   const [nickname, setNickname] = useState(person.nickname || "");
+  const [photo, setPhoto] = useState<string | undefined>(person.photo);
   const [email, setEmail] = useState(person.email || "");
   const [phone, setPhone] = useState(person.phone || "");
   const [birthday, setBirthday] = useState(person.birthday || "");
@@ -94,6 +96,7 @@ function EditPersonFormContent({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       nickname: nickname.trim() || undefined,
+      photo,
       email: email.trim() || undefined,
       phone: phone.trim() || undefined,
       birthday: birthday || undefined,
@@ -103,7 +106,7 @@ function EditPersonFormContent({
 
     toast.success(`${firstName} updated successfully`);
     onClose();
-  }, [firstName, lastName, nickname, email, phone, birthday, notes, tags, person.id, updatePerson, onClose]);
+  }, [firstName, lastName, nickname, photo, email, phone, birthday, notes, tags, person.id, updatePerson, onClose]);
 
   const handleDelete = useCallback(() => {
     if (window.confirm(`Are you sure you want to delete ${person.firstName}? This will also remove all their relationships.`)) {
@@ -177,39 +180,50 @@ function EditPersonFormContent({
             Basic Information
           </h3>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">
-                First Name <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="First name"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Last name"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="nickname">Nickname</Label>
-            <Input
-              id="nickname"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              placeholder="Nickname or preferred name"
+          {/* Photo and Name Row */}
+          <div className="flex items-start gap-4">
+            <PhotoUpload
+              value={photo}
+              onChange={setPhoto}
+              initials={`${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "?"}
+              size="lg"
             />
+            <div className="flex-1 space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">
+                    First Name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="First name"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Last name"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nickname">Nickname</Label>
+                <Input
+                  id="nickname"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="Nickname or preferred name"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
