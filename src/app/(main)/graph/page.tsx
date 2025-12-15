@@ -1,15 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useDataStore } from "@/stores/data-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RelationshipBadge } from "@/components/relationships";
 import { RELATIONSHIP_CONFIG } from "@/types";
-import { GitBranch, Users, ArrowRight } from "lucide-react";
+import { GitBranch, Users, ArrowRight, LayoutGrid, Network } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { FamilyGraph } from "@/components/graph";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 function getInitials(firstName: string, lastName: string): string {
   return `${firstName.charAt(0)}${lastName.charAt(0) || ""}`.toUpperCase();
@@ -17,6 +19,7 @@ function getInitials(firstName: string, lastName: string): string {
 
 export default function GraphPage() {
   const { people, relationships } = useDataStore();
+  const [activeTab, setActiveTab] = useState<"graph" | "list">("graph");
 
   // Build relationship map
   const relationshipMap = useMemo(() => {
@@ -79,11 +82,13 @@ export default function GraphPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Relationship Graph</h1>
-        <p className="text-muted-foreground mt-1">
-          Visualize connections between {people.length} people and {relationships.length} relationships
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Relationship Graph</h1>
+          <p className="text-muted-foreground mt-1">
+            Visualize connections between {people.length} people and {relationships.length} relationships
+          </p>
+        </div>
       </div>
 
       {/* Stats */}
@@ -122,132 +127,170 @@ export default function GraphPage() {
         </Card>
       </div>
 
-      {/* Relationship View */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Connections</h2>
+      {/* Tabs for Graph and List views */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "graph" | "list")}>
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsTrigger value="graph" className="gap-2">
+            <Network className="h-4 w-4" />
+            Interactive Graph
+          </TabsTrigger>
+          <TabsTrigger value="list" className="gap-2">
+            <LayoutGrid className="h-4 w-4" />
+            List View
+          </TabsTrigger>
+        </TabsList>
 
-        {relationships.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground">
-                No relationships defined yet. Add relationships when creating or editing people.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-3">
-            {relationships.map((rel) => {
-              const personA = people.find((p) => p.id === rel.personAId);
-              const personB = people.find((p) => p.id === rel.personBId);
-              if (!personA || !personB) return null;
+        {/* Graph View */}
+        <TabsContent value="graph" className="mt-6">
+          <FamilyGraph />
+          <p className="text-sm text-muted-foreground text-center mt-4">
+            Click on a person to view their profile. Drag to move, scroll to zoom.
+          </p>
+        </TabsContent>
 
-              return (
-                <Card key={rel.id} className="overflow-hidden">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
-                      {/* Person A */}
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <Avatar className="h-10 w-10">
-                          {personA.photo && (
-                            <AvatarImage src={personA.photo} alt={personA.firstName} />
-                          )}
-                          <AvatarFallback className="text-sm bg-primary/10 text-primary">
-                            {getInitials(personA.firstName, personA.lastName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="font-medium truncate">
-                            {personA.firstName} {personA.lastName}
-                          </p>
-                        </div>
-                      </div>
+        {/* List View */}
+        <TabsContent value="list" className="mt-6 space-y-6">
+          {/* Relationship View */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold">Connections</h2>
 
-                      {/* Relationship */}
-                      <div className="flex flex-col items-center gap-1 px-4">
-                        <RelationshipBadge type={rel.type} />
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
-
-                      {/* Person B */}
-                      <div className="flex items-center gap-3 flex-1 min-w-0 justify-end">
-                        <div className="min-w-0 text-right">
-                          <p className="font-medium truncate">
-                            {personB.firstName} {personB.lastName}
-                          </p>
-                        </div>
-                        <Avatar className="h-10 w-10">
-                          {personB.photo && (
-                            <AvatarImage src={personB.photo} alt={personB.firstName} />
-                          )}
-                          <AvatarFallback className="text-sm bg-primary/10 text-primary">
-                            {getInitials(personB.firstName, personB.lastName)}
-                          </AvatarFallback>
-                        </Avatar>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* People with their connections */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">People & Their Connections</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {sortedPeople.map((person) => {
-            const connections = relationshipMap.get(person.id) || [];
-            return (
-              <Card key={person.id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
-                      {person.photo && (
-                        <AvatarImage src={person.photo} alt={person.firstName} />
-                      )}
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {getInitials(person.firstName, person.lastName)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <CardTitle className="text-base">
-                        {person.firstName} {person.lastName}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {connections.length} connection{connections.length !== 1 ? "s" : ""}
-                      </p>
-                    </div>
-                  </div>
-                </CardHeader>
-                {connections.length > 0 && (
-                  <CardContent className="pt-0">
-                    <div className="flex flex-wrap gap-2">
-                      {connections.map((conn, idx) => {
-                        const config = RELATIONSHIP_CONFIG[conn.type as keyof typeof RELATIONSHIP_CONFIG];
-                        return (
-                          <Badge
-                            key={idx}
-                            variant="secondary"
-                            className="text-xs gap-1"
-                          >
-                            <span
-                              className={`h-2 w-2 rounded-full ${config?.color || "bg-gray-500"}`}
-                            />
-                            {config?.label || conn.type}: {conn.name.split(" ")[0]}
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                )}
+            {relationships.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                  <p className="text-muted-foreground">
+                    No relationships defined yet. Add relationships when creating or editing people.
+                  </p>
+                </CardContent>
               </Card>
-            );
-          })}
-        </div>
-      </div>
+            ) : (
+              <div className="grid gap-3">
+                {relationships.map((rel) => {
+                  const personA = people.find((p) => p.id === rel.personAId);
+                  const personB = people.find((p) => p.id === rel.personBId);
+                  if (!personA || !personB) return null;
+
+                  return (
+                    <Card key={rel.id} className="overflow-hidden">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-4">
+                          {/* Person A */}
+                          <Link
+                            href={`/person/${personA.id}`}
+                            className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+                          >
+                            <Avatar className="h-10 w-10">
+                              {personA.photo && (
+                                <AvatarImage src={personA.photo} alt={personA.firstName} />
+                              )}
+                              <AvatarFallback className="text-sm bg-primary/10 text-primary">
+                                {getInitials(personA.firstName, personA.lastName)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <p className="font-medium truncate">
+                                {personA.firstName} {personA.lastName}
+                              </p>
+                            </div>
+                          </Link>
+
+                          {/* Relationship */}
+                          <div className="flex flex-col items-center gap-1 px-4">
+                            <RelationshipBadge type={rel.type} />
+                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                          </div>
+
+                          {/* Person B */}
+                          <Link
+                            href={`/person/${personB.id}`}
+                            className="flex items-center gap-3 flex-1 min-w-0 justify-end hover:opacity-80 transition-opacity"
+                          >
+                            <div className="min-w-0 text-right">
+                              <p className="font-medium truncate">
+                                {personB.firstName} {personB.lastName}
+                              </p>
+                            </div>
+                            <Avatar className="h-10 w-10">
+                              {personB.photo && (
+                                <AvatarImage src={personB.photo} alt={personB.firstName} />
+                              )}
+                              <AvatarFallback className="text-sm bg-primary/10 text-primary">
+                                {getInitials(personB.firstName, personB.lastName)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </Link>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* People with their connections */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold">People & Their Connections</h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {sortedPeople.map((person) => {
+                const connections = relationshipMap.get(person.id) || [];
+                return (
+                  <Link key={person.id} href={`/person/${person.id}`}>
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-12 w-12">
+                            {person.photo && (
+                              <AvatarImage src={person.photo} alt={person.firstName} />
+                            )}
+                            <AvatarFallback className="bg-primary/10 text-primary">
+                              {getInitials(person.firstName, person.lastName)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <CardTitle className="text-base">
+                              {person.firstName} {person.lastName}
+                            </CardTitle>
+                            <p className="text-sm text-muted-foreground">
+                              {connections.length} connection{connections.length !== 1 ? "s" : ""}
+                            </p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      {connections.length > 0 && (
+                        <CardContent className="pt-0">
+                          <div className="flex flex-wrap gap-2">
+                            {connections.slice(0, 4).map((conn, idx) => {
+                              const config = RELATIONSHIP_CONFIG[conn.type as keyof typeof RELATIONSHIP_CONFIG];
+                              return (
+                                <Badge
+                                  key={idx}
+                                  variant="secondary"
+                                  className="text-xs gap-1"
+                                >
+                                  <span
+                                    className={`h-2 w-2 rounded-full ${config?.color || "bg-gray-500"}`}
+                                  />
+                                  {config?.label || conn.type}: {conn.name.split(" ")[0]}
+                                </Badge>
+                              );
+                            })}
+                            {connections.length > 4 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{connections.length - 4} more
+                              </Badge>
+                            )}
+                          </div>
+                        </CardContent>
+                      )}
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

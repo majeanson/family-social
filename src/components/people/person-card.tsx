@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,11 +11,10 @@ import {
 import { useDataStore } from "@/stores/data-store";
 import type { Person } from "@/types";
 import { RELATIONSHIP_CONFIG } from "@/types";
-import { Calendar, Mail, Phone, StickyNote } from "lucide-react";
+import { Calendar, Mail, Phone, StickyNote, ArrowUpRight } from "lucide-react";
 
 interface PersonCardProps {
   person: Person;
-  onClick?: () => void;
 }
 
 function getInitials(firstName: string, lastName: string): string {
@@ -43,7 +43,7 @@ function getUpcomingBirthday(birthday?: string): { days: number; isToday: boolea
   return { days: diffDays, isToday: diffDays === 0 };
 }
 
-export function PersonCard({ person, onClick }: PersonCardProps) {
+export function PersonCard({ person }: PersonCardProps) {
   const { relationships, people } = useDataStore();
   const initials = getInitials(person.firstName, person.lastName);
   const birthday = formatBirthday(person.birthday);
@@ -56,10 +56,8 @@ export function PersonCard({ person, onClick }: PersonCardProps) {
     .slice(0, 2);
 
   return (
-    <Card
-      className="group cursor-pointer transition-all hover:shadow-md hover:border-primary/20"
-      onClick={onClick}
-    >
+    <Link href={`/person/${person.id}`}>
+      <Card className="group cursor-pointer transition-all hover:shadow-md hover:border-primary/20 h-full">
       <CardHeader className="pb-3">
         <div className="flex items-start gap-4">
           <Avatar className="h-14 w-14 ring-2 ring-background shadow-sm">
@@ -164,7 +162,14 @@ export function PersonCard({ person, onClick }: PersonCardProps) {
             <p className="line-clamp-2 leading-relaxed">{person.notes}</p>
           </div>
         )}
+
+        {/* View Profile indicator */}
+        <div className="flex items-center justify-end text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+          <span>View Profile</span>
+          <ArrowUpRight className="h-3 w-3 ml-1" />
+        </div>
       </CardContent>
-    </Card>
+      </Card>
+    </Link>
   );
 }
