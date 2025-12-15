@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useDataStore } from "@/stores/data-store";
 import {
   downloadJSON,
@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -37,8 +38,78 @@ import {
   HardDrive,
   Cloud,
   AlertTriangle,
+  ClipboardPaste,
+  UserPlus,
 } from "lucide-react";
-import type { AppSettings } from "@/types";
+import type { AppSettings, PersonFormData } from "@/types";
+
+// Parse text format response (from Copy Text / Native Share)
+function parseTextResponse(text: string): PersonFormData | null {
+  try {
+    const lines = text.split("\n");
+    const data: Record<string, string> = {};
+
+    for (const line of lines) {
+      // Skip empty lines, separators, and headers
+      if (!line.trim() || line.startsWith("---") || line.startsWith("📋") ||
+          line.startsWith("Submitted:") || line.startsWith("Sent via")) {
+        continue;
+      }
+
+      const colonIndex = line.indexOf(":");
+      if (colonIndex > 0) {
+        const key = line.substring(0, colonIndex).trim().toLowerCase();
+        const value = line.substring(colonIndex + 1).trim();
+        if (value && value !== "(not provided)") {
+          data[key] = value;
+        }
+      }
+    }
+
+    // Map common field names
+    const firstName = data["first name"] || data["firstname"] || data["name"]?.split(" ")[0] || "";
+    if (!firstName) return null;
+
+    return {
+      firstName,
+      lastName: data["last name"] || data["lastname"] || data["name"]?.split(" ").slice(1).join(" ") || "",
+      nickname: data["nickname"] || data["nick"] || "",
+      email: data["email"] || data["e-mail"] || "",
+      phone: data["phone"] || data["telephone"] || data["mobile"] || "",
+      birthday: data["birthday"] || data["birth date"] || data["birthdate"] || "",
+      notes: data["notes"] || data["dietary restrictions"] || "",
+      tags: [],
+      customFields: [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Parse JSON format response
+function parseJSONResponse(json: string): PersonFormData | null {
+  try {
+    const parsed = JSON.parse(json);
+    const responses = parsed.responses || parsed;
+
+    const firstName = responses["First Name"] || responses["firstName"] || responses.firstName || "";
+    if (!firstName) return null;
+
+    return {
+      firstName,
+      lastName: responses["Last Name"] || responses["lastName"] || responses.lastName || "",
+      nickname: responses["Nickname"] || responses["nickname"] || "",
+      email: responses["Email"] || responses["email"] || "",
+      phone: responses["Phone"] || responses["phone"] || "",
+      birthday: responses["Birthday"] || responses["birthday"] || responses["Birth Date"] || "",
+      notes: responses["Notes"] || responses["notes"] || responses["Dietary Restrictions"] || "",
+      tags: [],
+      customFields: [],
+    };
+  } catch {
+    return null;
+  }
+}
 
 export default function SettingsPage() {
   const {
@@ -47,12 +118,15 @@ export default function SettingsPage() {
     exportData,
     loadData,
     resetData,
+    addPerson,
     people,
     relationships,
     formTemplates,
     lastSaved,
   } = useDataStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const responseFileInputRef = useRef<HTMLInputElement>(null);
+  const [pastedResponse, setPastedResponse] = useState("");
 
   const handleExport = () => {
     const data = exportData();
@@ -100,6 +174,51 @@ export default function SettingsPage() {
     ) {
       resetData();
       toast.success("All data has been reset");
+    }
+  };
+
+  const handleImportResponse = () => {
+    if (!pastedResponse.trim()) {
+      toast.error("Please paste a response first");
+      return;
+    }
+
+    // Try JSON first, then text format
+    let personData = parseJSONResponse(pastedResponse);
+    if (!personData) {
+      personData = parseTextResponse(pastedResponse);
+    }
+
+    if (personData) {
+      addPerson(personData);
+      toast.success(`Added ${personData.firstName} ${personData.lastName || ""} to your people!`);
+      setPastedResponse("");
+    } else {
+      toast.error("Could not parse the response. Make sure you pasted the complete response.");
+    }
+  };
+
+  const handleImportResponseFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const personData = parseJSONResponse(text);
+
+      if (personData) {
+        addPerson(personData);
+        toast.success(`Added ${personData.firstName} ${personData.lastName || ""} to your people!`);
+      } else {
+        toast.error("Could not parse the file. Make sure it's a valid response JSON.");
+      }
+    } catch {
+      toast.error("Failed to read the file.");
+    }
+
+    // Reset file input
+    if (responseFileInputRef.current) {
+      responseFileInputRef.current.value = "";
     }
   };
 
@@ -171,6 +290,65 @@ export default function SettingsPage() {
               Last saved: {lastSaved.toLocaleString()}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Import Shared Response */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5" />
+            Import Shared Response
+          </CardTitle>
+          <CardDescription>
+            Paste a response you received from a shared form to add them as a person
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="response-paste">Paste Response (Text or JSON)</Label>
+            <Textarea
+              id="response-paste"
+              value={pastedResponse}
+              onChange={(e) => setPastedResponse(e.target.value)}
+              placeholder={`Paste the response here...
+
+Examples:
+• Text from a message (First Name: John, Last Name: Doe, etc.)
+• JSON from the Download or Copy JSON option`}
+              rows={6}
+              className="font-mono text-sm"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <Button onClick={handleImportResponse} className="flex-1">
+              <ClipboardPaste className="mr-2 h-4 w-4" />
+              Import from Paste
+            </Button>
+
+            <div>
+              <input
+                ref={responseFileInputRef}
+                type="file"
+                accept=".json"
+                onChange={handleImportResponseFile}
+                className="hidden"
+                id="import-response-file"
+              />
+              <Button
+                variant="outline"
+                onClick={() => responseFileInputRef.current?.click()}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Import File
+              </Button>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Supports both text format (from Copy Text / Native Share) and JSON format (from Download / Copy JSON)
+          </p>
         </CardContent>
       </Card>
 

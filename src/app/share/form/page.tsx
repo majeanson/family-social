@@ -167,6 +167,13 @@ function ShareFormContent() {
           </CardHeader>
           <CardContent className="space-y-3">
             <Button
+              className="w-full"
+              onClick={() => setStep("preview")}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Share Another Way
+            </Button>
+            <Button
               variant="outline"
               className="w-full"
               onClick={() => {

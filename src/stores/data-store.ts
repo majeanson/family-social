@@ -17,6 +17,13 @@ import {
   createEmptyDataStore,
   RELATIONSHIP_INVERSES,
 } from "@/types";
+import {
+  MOCK_PEOPLE,
+  MOCK_RELATIONSHIPS,
+  MOCK_FORM_TEMPLATES,
+  hasMockData,
+  filterOutMockData,
+} from "@/lib/mock-data";
 
 interface DataState {
   // Data
@@ -30,6 +37,7 @@ interface DataState {
   isSaving: boolean;
   lastSaved: Date | null;
   hasUnsavedChanges: boolean;
+  hasMockData: boolean;
 
   // Actions - People
   addPerson: (data: PersonFormData) => string;
@@ -62,6 +70,8 @@ interface DataState {
   exportData: () => DataStore;
   resetData: () => void;
   markSaved: () => void;
+  clearMockData: () => void;
+  loadMockData: () => void;
 
   // Actions - Settings
   updateSettings: (updates: Partial<AppSettings>) => void;
@@ -69,21 +79,30 @@ interface DataState {
 
 export const useDataStore = create<DataState>()(
   immer((set, get) => ({
-    // Initial state
-    people: [],
-    relationships: [],
-    formTemplates: [],
+    // Initial state - start with mock data
+    people: MOCK_PEOPLE,
+    relationships: MOCK_RELATIONSHIPS,
+    formTemplates: MOCK_FORM_TEMPLATES,
     settings: DEFAULT_SETTINGS,
     isLoaded: false,
     isSaving: false,
     lastSaved: null,
     hasUnsavedChanges: false,
+    hasMockData: true,
 
     // People actions
     addPerson: (data) => {
       const id = uuid();
       const now = new Date().toISOString();
       set((state) => {
+        // Clear mock data when user starts entering their own
+        if (state.hasMockData) {
+          const filtered = filterOutMockData(state.people, state.relationships, state.formTemplates);
+          state.people = filtered.people;
+          state.relationships = filtered.relationships;
+          state.formTemplates = filtered.formTemplates;
+          state.hasMockData = false;
+        }
         state.people.push({
           ...data,
           id,
@@ -177,6 +196,14 @@ export const useDataStore = create<DataState>()(
       const id = uuid();
       const now = new Date().toISOString();
       set((state) => {
+        // Clear mock data when user starts creating their own forms
+        if (state.hasMockData) {
+          const filtered = filterOutMockData(state.people, state.relationships, state.formTemplates);
+          state.people = filtered.people;
+          state.relationships = filtered.relationships;
+          state.formTemplates = filtered.formTemplates;
+          state.hasMockData = false;
+        }
         state.formTemplates.push({
           id,
           name,
@@ -214,9 +241,34 @@ export const useDataStore = create<DataState>()(
     // Data Management
     loadData: (data) => {
       set((state) => {
-        state.people = data.people || [];
-        state.relationships = data.relationships || [];
-        state.formTemplates = data.formTemplates || [];
+        const people = data.people || [];
+        const relationships = data.relationships || [];
+        const formTemplates = data.formTemplates || [];
+
+        // Check if loaded data has real (non-mock) content
+        const hasRealData = people.length > 0 || relationships.length > 0 || formTemplates.length > 0;
+        const containsMockData = hasMockData(people, relationships, formTemplates);
+
+        if (hasRealData && !containsMockData) {
+          // User has real data - use it and don't show mock
+          state.people = people;
+          state.relationships = relationships;
+          state.formTemplates = formTemplates;
+          state.hasMockData = false;
+        } else if (containsMockData) {
+          // Data contains mock - keep it
+          state.people = people;
+          state.relationships = relationships;
+          state.formTemplates = formTemplates;
+          state.hasMockData = true;
+        } else {
+          // No data - load mock data
+          state.people = MOCK_PEOPLE;
+          state.relationships = MOCK_RELATIONSHIPS;
+          state.formTemplates = MOCK_FORM_TEMPLATES;
+          state.hasMockData = true;
+        }
+
         state.settings = { ...DEFAULT_SETTINGS, ...data.settings };
         state.isLoaded = true;
         state.hasUnsavedChanges = false;
@@ -241,6 +293,7 @@ export const useDataStore = create<DataState>()(
         state.relationships = empty.relationships;
         state.formTemplates = empty.formTemplates;
         state.settings = empty.settings;
+        state.hasMockData = false;
         state.hasUnsavedChanges = true;
       });
     },
@@ -249,6 +302,29 @@ export const useDataStore = create<DataState>()(
       set((state) => {
         state.hasUnsavedChanges = false;
         state.lastSaved = new Date();
+      });
+    },
+
+    clearMockData: () => {
+      set((state) => {
+        if (state.hasMockData) {
+          const filtered = filterOutMockData(state.people, state.relationships, state.formTemplates);
+          state.people = filtered.people;
+          state.relationships = filtered.relationships;
+          state.formTemplates = filtered.formTemplates;
+          state.hasMockData = false;
+          state.hasUnsavedChanges = true;
+        }
+      });
+    },
+
+    loadMockData: () => {
+      set((state) => {
+        state.people = MOCK_PEOPLE;
+        state.relationships = MOCK_RELATIONSHIPS;
+        state.formTemplates = MOCK_FORM_TEMPLATES;
+        state.hasMockData = true;
+        state.hasUnsavedChanges = false;
       });
     },
 
