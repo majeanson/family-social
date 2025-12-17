@@ -1,61 +1,26 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import { useDataStore } from "@/stores/data-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { RelationshipBadge } from "@/components/relationships";
 import { RELATIONSHIP_CONFIG } from "@/types";
-import { GitBranch, Users, ArrowRight, LayoutGrid, Network, Filter, X, Circle, TreePine, Sparkles } from "lucide-react";
+import { GitBranch, Users, ArrowRight, LayoutGrid, Network } from "lucide-react";
 import Link from "next/link";
-import { FamilyGraph, type FamilyGroup, type GraphLayoutType } from "@/components/graph";
+import { VisualizationContainer } from "@/components/visualization";
+import { useFamilyGroups } from "@/features/use-family-groups";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getInitials, getRelationshipColor } from "@/lib/utils";
-import { DEFAULT_FAMILY_COLORS, type RelationshipType } from "@/types";
+import { type RelationshipType } from "@/types";
 
 export default function GraphPage() {
   const { people, relationships, settings } = useDataStore();
-
-  // Get colors from settings (ensure non-empty array)
-  const familyColors = (settings.familyColors && settings.familyColors.length > 0)
-    ? settings.familyColors
-    : DEFAULT_FAMILY_COLORS;
+  const { familyGroups } = useFamilyGroups();
   const relationshipColors = settings.relationshipColors;
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"graph" | "list">("graph");
-  // Initialize from URL param
-  const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(
-    () => searchParams.get("family")
-  );
-  const [familyGroups, setFamilyGroups] = useState<FamilyGroup[]>([]);
-  const [layoutType, setLayoutType] = useState<GraphLayoutType>("radial");
-
-  // Update URL when family selection changes
-  const handleFamilyChange = useCallback((familyId: string | null) => {
-    setSelectedFamilyId(familyId);
-    const params = new URLSearchParams(searchParams.toString());
-    if (familyId) {
-      params.set("family", familyId);
-    } else {
-      params.delete("family");
-    }
-    router.replace(`/graph?${params.toString()}`, { scroll: false });
-  }, [searchParams, router]);
-
-  const handleFamilyGroupsChange = useCallback((groups: FamilyGroup[]) => {
-    setFamilyGroups(groups);
-  }, []);
 
   // Build relationship map
   const relationshipMap = useMemo(() => {
@@ -97,9 +62,6 @@ export default function GraphPage() {
       return bConnections - aConnections;
     });
   }, [people, relationshipMap]);
-
-  // Get selected family info
-  const selectedFamily = familyGroups.find(g => g.id === selectedFamilyId);
 
   if (people.length === 0) {
     return (
@@ -166,151 +128,20 @@ export default function GraphPage() {
 
       {/* Tabs for Graph and List views */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "graph" | "list")}>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
-            <TabsTrigger value="graph" className="gap-2">
-              <Network className="h-4 w-4" />
-              Interactive Graph
-            </TabsTrigger>
-            <TabsTrigger value="list" className="gap-2">
-              <LayoutGrid className="h-4 w-4" />
-              List View
-            </TabsTrigger>
-          </TabsList>
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsTrigger value="graph" className="gap-2">
+            <Network className="h-4 w-4" />
+            Visualization
+          </TabsTrigger>
+          <TabsTrigger value="list" className="gap-2">
+            <LayoutGrid className="h-4 w-4" />
+            List View
+          </TabsTrigger>
+        </TabsList>
 
-          {/* Graph controls - Only show in graph tab */}
-          {activeTab === "graph" && (
-            <div className="flex items-center gap-4">
-              {/* Layout Selector */}
-              <div className="flex items-center gap-2">
-                <Select
-                  value={layoutType}
-                  onValueChange={(v) => setLayoutType(v as GraphLayoutType)}
-                >
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Layout..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="radial">
-                      <div className="flex items-center gap-2">
-                        <Circle className="h-4 w-4" />
-                        <span>Radial</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="hierarchical">
-                      <div className="flex items-center gap-2">
-                        <TreePine className="h-4 w-4" />
-                        <span>Tree</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="force">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="h-4 w-4" />
-                        <span>Force</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Family Filter */}
-              {familyGroups.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-muted-foreground" />
-                  <Select
-                    value={selectedFamilyId || "all"}
-                    onValueChange={(v) => handleFamilyChange(v === "all" ? null : v)}
-                  >
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Filter by family..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Families</SelectItem>
-                      {familyGroups.map((group) => {
-                        const color = familyColors[group.colorIndex % familyColors.length];
-                        return (
-                          <SelectItem key={group.id} value={group.id}>
-                            <div className="flex items-center gap-2">
-                              <div className={`w-3 h-3 rounded-full ${color.bg}`} />
-                              <span>{group.name}</span>
-                              <Badge variant="secondary" className="ml-auto text-xs">
-                                {group.memberIds.size}
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                  {selectedFamilyId && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleFamilyChange(null)}
-                      className="h-8 w-8"
-                      aria-label="Clear family filter"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Family Legend - Show when viewing all families */}
-        {activeTab === "graph" && !selectedFamilyId && familyGroups.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-4">
-            {familyGroups.map((group) => {
-              const color = familyColors[group.colorIndex % familyColors.length];
-              return (
-                <button
-                  key={group.id}
-                  onClick={() => handleFamilyChange(group.id)}
-                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border transition-colors hover:opacity-80 cursor-pointer ${color.light} ${color.border}`}
-                  title="Click to filter by this family"
-                >
-                  <div className={`w-2.5 h-2.5 rounded-full ${color.bg}`} />
-                  <span className="font-medium">{group.name}</span>
-                  <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                    {group.memberIds.size}
-                  </Badge>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Selected Family Info */}
-        {activeTab === "graph" && selectedFamily && (
-          <div className="flex items-center gap-3 mt-4 p-3 rounded-lg bg-muted/50">
-            <div
-              className={`w-4 h-4 rounded-full ${familyColors[selectedFamily.colorIndex % familyColors.length].bg}`}
-            />
-            <span className="font-medium">Viewing: {selectedFamily.name}</span>
-            <Badge variant="secondary">{selectedFamily.memberIds.size} members</Badge>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleFamilyChange(null)}
-              className="ml-auto"
-            >
-              Show All
-            </Button>
-          </div>
-        )}
-
-        {/* Graph View */}
+        {/* Graph View - New Visualization System */}
         <TabsContent value="graph" className="mt-6">
-          <FamilyGraph
-            selectedFamilyId={selectedFamilyId}
-            onFamilyGroupsChange={handleFamilyGroupsChange}
-            layoutType={layoutType}
-          />
-          <p className="text-sm text-muted-foreground text-center mt-4">
-            Click on a person to view their profile. Drag to move, scroll to zoom.
-          </p>
+          <VisualizationContainer />
         </TabsContent>
 
         {/* List View */}

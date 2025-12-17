@@ -1,0 +1,394 @@
+"use client";
+
+import { useRef, useMemo, useCallback, useState, useEffect } from "react";
+import { useDataStore } from "@/stores/data-store";
+import {
+  useGenerationLayout,
+  groupFamilyUnits,
+  type FamilyUnit,
+} from "./hooks/use-generation-layout";
+import { useFocusState } from "./hooks/use-focus-state";
+import { PersonNode, SpousePair } from "./person-node";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Home, ZoomIn, ZoomOut, Move } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// Layout constants
+const GENERATION_HEIGHT = 220;
+const NODE_WIDTH = 180;
+const SPOUSE_GAP = 24;
+const SIBLING_GAP = 48;
+const FAMILY_UNIT_GAP = 80;
+
+interface NodePosition {
+  x: number;
+  y: number;
+  width: number;
+}
+
+export function FamilyTreeView() {
+  const { people, relationships } = useDataStore();
+  const { focusPersonId, setFocus, goBack, canGoBack, clearFocus } = useFocusState();
+  const layout = useGenerationLayout(focusPersonId);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  // Calculate node positions for each generation
+  const { nodePositions, svgLines, contentBounds } = useMemo(() => {
+    if (!layout) {
+      return { nodePositions: new Map<string, NodePosition>(), svgLines: [], contentBounds: { width: 0, height: 0 } };
+    }
+
+    const positions = new Map<string, NodePosition>();
+    const lines: Array<{
+      from: { x: number; y: number };
+      to: { x: number; y: number };
+      style: "solid" | "dashed" | "double";
+    }> = [];
+
+    // Sort generations from top (oldest) to bottom (youngest)
+    const sortedGenerations = Array.from(layout.byGeneration.entries()).sort(
+      ([a], [b]) => a - b
+    );
+
+    let maxWidth = 0;
+
+    // Calculate positions for each generation
+    sortedGenerations.forEach(([gen, genPeople], genIndex) => {
+      const y = (genIndex + 1) * GENERATION_HEIGHT;
+
+      // Get family units for this generation
+      const nextGen = layout.byGeneration.get(gen + 1);
+      const units = groupFamilyUnits(genPeople, relationships, people, nextGen);
+
+      // Calculate total width for this generation
+      let totalWidth = 0;
+      units.forEach((unit, i) => {
+        const unitWidth = unit.spouse
+          ? NODE_WIDTH * 2 + SPOUSE_GAP
+          : NODE_WIDTH;
+        totalWidth += unitWidth;
+        if (i > 0) totalWidth += FAMILY_UNIT_GAP;
+      });
+
+      maxWidth = Math.max(maxWidth, totalWidth);
+
+      // Position each unit
+      let currentX = -totalWidth / 2;
+      units.forEach((unit) => {
+        const unitWidth = unit.spouse
+          ? NODE_WIDTH * 2 + SPOUSE_GAP
+          : NODE_WIDTH;
+
+        // Position primary person
+        const primaryX = currentX + (unit.spouse ? NODE_WIDTH / 2 : unitWidth / 2);
+        positions.set(unit.primary.id, {
+          x: primaryX,
+          y,
+          width: NODE_WIDTH,
+        });
+
+        // Position spouse
+        if (unit.spouse) {
+          const spouseX = currentX + NODE_WIDTH + SPOUSE_GAP + NODE_WIDTH / 2;
+          positions.set(unit.spouse.id, {
+            x: spouseX,
+            y,
+            width: NODE_WIDTH,
+          });
+
+          // Add spouse connector line
+          lines.push({
+            from: { x: primaryX + NODE_WIDTH / 2, y },
+            to: { x: spouseX - NODE_WIDTH / 2, y },
+            style: "double",
+          });
+        }
+
+        currentX += unitWidth + FAMILY_UNIT_GAP;
+      });
+    });
+
+    // Add parent-child lines
+    for (const rel of relationships) {
+      const fromPos = positions.get(rel.personAId);
+      const toPos = positions.get(rel.personBId);
+      if (!fromPos || !toPos) continue;
+
+      // Determine if this is a parent-child relationship
+      const isParentChild =
+        rel.type.toLowerCase().includes("parent") ||
+        rel.type.toLowerCase().includes("child") ||
+        rel.type.toLowerCase().includes("father") ||
+        rel.type.toLowerCase().includes("mother") ||
+        rel.type.toLowerCase().includes("son") ||
+        rel.type.toLowerCase().includes("daughter");
+
+      if (isParentChild) {
+        // Vertical line for parent-child
+        const parentPos = fromPos.y < toPos.y ? fromPos : toPos;
+        const childPos = fromPos.y < toPos.y ? toPos : fromPos;
+
+        lines.push({
+          from: { x: parentPos.x, y: parentPos.y + 60 }, // Bottom of parent
+          to: { x: childPos.x, y: childPos.y - 60 }, // Top of child
+          style: "solid",
+        });
+      }
+    }
+
+    const height = (sortedGenerations.length + 1) * GENERATION_HEIGHT;
+
+    return {
+      nodePositions: positions,
+      svgLines: lines,
+      contentBounds: { width: maxWidth + 200, height },
+    };
+  }, [layout, relationships, people]);
+
+  // Handle zoom
+  const handleZoomIn = useCallback(() => {
+    setZoom((z) => Math.min(z + 0.2, 2));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom((z) => Math.max(z - 0.2, 0.4));
+  }, []);
+
+  const handleCenterView = useCallback(() => {
+    setPan({ x: 0, y: 0 });
+    setZoom(1);
+  }, []);
+
+  // Handle pan with mouse drag
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Left click only
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  }, [pan]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setPan({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  }, [isDragging, dragStart]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Handle wheel zoom
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      setZoom((z) => Math.max(0.4, Math.min(2, z + delta)));
+    }
+  }, []);
+
+  // Center view on initial load or when focus changes
+  useEffect(() => {
+    if (focusPersonId && nodePositions.has(focusPersonId)) {
+      const pos = nodePositions.get(focusPersonId)!;
+      // Center the focused person
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setPan({
+          x: rect.width / 2 - pos.x * zoom,
+          y: rect.height / 3 - pos.y * zoom,
+        });
+      }
+    }
+  }, [focusPersonId, nodePositions, zoom]);
+
+  if (!layout || people.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[600px] text-muted-foreground">
+        No people to display
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative h-[700px] border rounded-lg bg-muted/20 overflow-hidden">
+      {/* Controls */}
+      <div className="absolute top-4 left-4 z-10 flex gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={goBack}
+          disabled={!canGoBack}
+          className="bg-background/80 backdrop-blur"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={clearFocus}
+          className="bg-background/80 backdrop-blur"
+          aria-label="Go to primary user"
+        >
+          <Home className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="absolute top-4 right-4 z-10 flex gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleZoomOut}
+          className="bg-background/80 backdrop-blur"
+          aria-label="Zoom out"
+        >
+          <ZoomOut className="h-4 w-4" />
+        </Button>
+        <span className="flex items-center px-2 bg-background/80 backdrop-blur rounded-md text-sm">
+          {Math.round(zoom * 100)}%
+        </span>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleZoomIn}
+          className="bg-background/80 backdrop-blur"
+          aria-label="Zoom in"
+        >
+          <ZoomIn className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleCenterView}
+          className="bg-background/80 backdrop-blur"
+          aria-label="Center view"
+        >
+          <Move className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Generation labels */}
+      <div className="absolute left-4 top-20 z-10 flex flex-col gap-2">
+        {Array.from(layout.byGeneration.keys())
+          .sort((a, b) => a - b)
+          .map((gen, i) => (
+            <div
+              key={gen}
+              className="text-xs text-muted-foreground bg-background/80 backdrop-blur px-2 py-1 rounded"
+              style={{ marginTop: i === 0 ? 0 : GENERATION_HEIGHT * zoom - 24 }}
+            >
+              Gen {gen > 0 ? `+${gen}` : gen}
+            </div>
+          ))}
+      </div>
+
+      {/* Canvas */}
+      <div
+        ref={containerRef}
+        className={cn(
+          "w-full h-full",
+          isDragging ? "cursor-grabbing" : "cursor-grab"
+        )}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onWheel={handleWheel}
+      >
+        <div
+          className="relative"
+          style={{
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: "center center",
+            width: contentBounds.width,
+            height: contentBounds.height,
+            left: "50%",
+            marginLeft: -contentBounds.width / 2,
+          }}
+        >
+          {/* SVG Lines */}
+          <svg
+            className="absolute inset-0 pointer-events-none"
+            width={contentBounds.width}
+            height={contentBounds.height}
+            style={{ left: 0, top: 0 }}
+          >
+            {svgLines.map((line, i) => {
+              const midY = (line.from.y + line.to.y) / 2;
+
+              if (line.style === "double") {
+                // Horizontal spouse connector
+                return (
+                  <g key={i}>
+                    <line
+                      x1={line.from.x + contentBounds.width / 2}
+                      y1={line.from.y}
+                      x2={line.to.x + contentBounds.width / 2}
+                      y2={line.to.y}
+                      stroke="rgb(244, 114, 182)" // rose-400
+                      strokeWidth="3"
+                    />
+                  </g>
+                );
+              }
+
+              // Parent-child vertical connector with step
+              return (
+                <path
+                  key={i}
+                  d={`
+                    M ${line.from.x + contentBounds.width / 2} ${line.from.y}
+                    L ${line.from.x + contentBounds.width / 2} ${midY}
+                    L ${line.to.x + contentBounds.width / 2} ${midY}
+                    L ${line.to.x + contentBounds.width / 2} ${line.to.y}
+                  `}
+                  fill="none"
+                  stroke="rgb(148, 163, 184)" // slate-400
+                  strokeWidth="2"
+                  strokeDasharray={line.style === "dashed" ? "8,4" : undefined}
+                />
+              );
+            })}
+          </svg>
+
+          {/* Person Nodes */}
+          {Array.from(nodePositions.entries()).map(([personId, pos]) => {
+            const person = people.find((p) => p.id === personId);
+            if (!person) return null;
+
+            const degree = layout.degrees.get(personId) ?? Infinity;
+
+            return (
+              <div
+                key={personId}
+                className="absolute"
+                style={{
+                  left: pos.x + contentBounds.width / 2 - pos.width / 2,
+                  top: pos.y - 60, // Center vertically
+                }}
+              >
+                <PersonNode
+                  person={person}
+                  degree={degree}
+                  isFocused={personId === focusPersonId}
+                  onClick={setFocus}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Instructions */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-muted-foreground bg-background/80 backdrop-blur px-3 py-1.5 rounded-full">
+        Click a person to focus | Drag to pan | Ctrl+scroll to zoom
+      </div>
+    </div>
+  );
+}
