@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useDataStore } from "@/stores/data-store";
 import {
   getStorage,
@@ -26,6 +26,8 @@ export function DataProvider({ children }: DataProviderProps) {
     useDataStore();
   const [showSetup, setShowSetup] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  const isSavingRef = useRef(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize storage on mount
   useEffect(() => {
@@ -60,20 +62,38 @@ export function DataProvider({ children }: DataProviderProps) {
     init();
   }, [loadData]);
 
-  // Auto-save when data changes
+  // Auto-save when data changes (with race condition protection)
   useEffect(() => {
     if (!isLoaded || !hasUnsavedChanges) return;
 
-    const timer = setTimeout(async () => {
-      const storage = getStorage();
-      const data = exportData();
-      const success = await storage.write(data);
-      if (success) {
-        markSaved();
+    // Clear any existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(async () => {
+      // Prevent overlapping saves
+      if (isSavingRef.current) return;
+      isSavingRef.current = true;
+
+      try {
+        const storage = getStorage();
+        // Capture data at save time from store
+        const data = exportData();
+        const success = await storage.write(data);
+        if (success) {
+          markSaved();
+        }
+      } finally {
+        isSavingRef.current = false;
       }
     }, 2000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
   }, [isLoaded, hasUnsavedChanges, exportData, markSaved]);
 
   const handleCreateNew = useCallback(async () => {

@@ -266,7 +266,11 @@ export const useDataStore = create<DataState>()(
         if (hasRealData && !containsMockData) {
           // User has real data - use it and don't show mock
           state.people = people;
-          state.relationships = relationships;
+          // Clean up orphaned relationships (pointing to deleted people)
+          const personIds = new Set(people.map((p) => p.id));
+          state.relationships = relationships.filter(
+            (r) => personIds.has(r.personAId) && personIds.has(r.personBId)
+          );
           state.formTemplates = formTemplates;
           state.hasMockData = false;
         } else if (containsMockData) {

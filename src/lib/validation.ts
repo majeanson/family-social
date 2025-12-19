@@ -94,6 +94,7 @@ const appSettingsSchema = z.object({
   familyColors: z.array(familyColorConfigSchema).optional(),
   relationshipColors: z.record(z.string(), z.string()).optional(),
   primaryUserId: z.string().optional(),
+  familyNames: z.record(z.string(), z.string()).optional(),
 });
 
 // Main data store schema

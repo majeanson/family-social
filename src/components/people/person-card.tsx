@@ -115,7 +115,7 @@ export const PersonCard = memo(function PersonCard({ person }: PersonCardProps) 
                     className={`h-4 w-4 rounded flex items-center justify-center text-white ${getRelationshipColor(relType as RelationshipType, relationshipColors)}`}
                   >
                     <span className="text-[10px]">
-                      {RELATIONSHIP_CONFIG[relType].label.charAt(0)}
+                      {(RELATIONSHIP_CONFIG[relType as keyof typeof RELATIONSHIP_CONFIG]?.label || relType || "?").charAt(0).toUpperCase()}
                     </span>
                   </span>
                   <span className="text-muted-foreground truncate max-w-[80px]">
