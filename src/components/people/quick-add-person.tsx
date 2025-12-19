@@ -199,15 +199,15 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
           <div className="space-y-6 py-6">
             {/* Name Section */}
             <div className="space-y-4">
-              <div className="flex items-start gap-4">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
                 <PhotoUpload
                   value={photo}
                   onChange={setPhoto}
                   initials={`${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "?"}
                   size="md"
                 />
-                <div className="flex-1 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="flex-1 w-full space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">
                         First Name <span className="text-destructive">*</span>
@@ -257,7 +257,7 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
                     Relationship (optional)
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="relatedTo">Related to</Label>
                       <Select value={relatedTo} onValueChange={setRelatedTo}>
@@ -300,7 +300,7 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
                 <Input id="birthday" name="birthday" type="date" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input

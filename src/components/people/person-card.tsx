@@ -51,7 +51,7 @@ export const PersonCard = memo(function PersonCard({ person }: PersonCardProps) 
         <div className="flex items-start gap-4">
           <div className="relative">
             <Avatar className="h-14 w-14 ring-2 ring-background shadow-sm">
-              {person.photo && <AvatarImage src={person.photo} alt={displayName} />}
+              {person.photo && <AvatarImage src={person.photo} alt={`Photo of ${person.firstName} ${person.lastName}`} />}
               <AvatarFallback className={cn(
                 "text-lg font-medium",
                 familyColor ? `${familyColor.bg} text-white` : "bg-primary/10 text-primary"
@@ -131,7 +131,7 @@ export const PersonCard = memo(function PersonCard({ person }: PersonCardProps) 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
           {birthday && (
             <span className="flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5" />
+              <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
               <span>{birthday.shortDisplay}</span>
               {(birthday.isToday || birthday.isUpcoming) && (
                 <Badge
@@ -144,14 +144,14 @@ export const PersonCard = memo(function PersonCard({ person }: PersonCardProps) 
             </span>
           )}
           {person.email && (
-            <span className="flex items-center gap-1.5 truncate max-w-[140px]">
-              <Mail className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="flex items-center gap-1.5 truncate max-w-[180px] sm:max-w-[140px]">
+              <Mail className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
               <span className="truncate">{person.email}</span>
             </span>
           )}
           {person.phone && (
             <span className="flex items-center gap-1.5">
-              <Phone className="h-3.5 w-3.5" />
+              <Phone className="h-3.5 w-3.5" aria-hidden="true" />
               <span>{person.phone}</span>
             </span>
           )}
@@ -160,7 +160,7 @@ export const PersonCard = memo(function PersonCard({ person }: PersonCardProps) 
         {/* Notes preview */}
         {person.notes && (
           <div className="flex items-start gap-1.5 text-xs text-muted-foreground bg-muted/30 rounded-md p-2">
-            <StickyNote className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+            <StickyNote className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" aria-hidden="true" />
             <p className="line-clamp-2 leading-relaxed">{person.notes}</p>
           </div>
         )}
@@ -168,7 +168,7 @@ export const PersonCard = memo(function PersonCard({ person }: PersonCardProps) 
         {/* View Profile indicator */}
         <div className="flex items-center justify-end text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
           <span>View Profile</span>
-          <ArrowUpRight className="h-3 w-3 ml-1" />
+          <ArrowUpRight className="h-3 w-3 ml-1" aria-hidden="true" />
         </div>
       </CardContent>
       </Card>

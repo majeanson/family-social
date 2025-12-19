@@ -159,11 +159,13 @@ export function PeopleView() {
         {/* Cards View */}
         <TabsContent value="cards" className="space-y-6 mt-6">
           {/* Filters */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
             {/* Search */}
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <label htmlFor="search-people" className="sr-only">Search by name or tag</label>
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" aria-hidden="true" />
               <Input
+                id="search-people"
                 placeholder="Search by name or tag..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -284,27 +286,29 @@ export function PeopleView() {
 
           {/* Active Filters */}
           {(selectedTags.length > 0 || selectedFamily) && (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Active filters">
               <span className="text-sm text-muted-foreground">Filters:</span>
               {selectedFamily && (
-                <Badge
-                  variant="outline"
-                  className={`cursor-pointer ${FAMILY_COLORS[selectedFamily.colorIndex % FAMILY_COLORS.length].light} ${FAMILY_COLORS[selectedFamily.colorIndex % FAMILY_COLORS.length].border}`}
+                <button
+                  type="button"
                   onClick={() => setSelectedFamilyId(null)}
+                  aria-label={`Remove ${selectedFamily.name} filter`}
+                  className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:opacity-80 ${FAMILY_COLORS[selectedFamily.colorIndex % FAMILY_COLORS.length].light} ${FAMILY_COLORS[selectedFamily.colorIndex % FAMILY_COLORS.length].border}`}
                 >
-                  <span className={`w-2 h-2 rounded-full mr-1.5 ${FAMILY_COLORS[selectedFamily.colorIndex % FAMILY_COLORS.length].bg}`} />
-                  {selectedFamily.name} ×
-                </Badge>
+                  <span className={`w-2 h-2 rounded-full mr-1.5 ${FAMILY_COLORS[selectedFamily.colorIndex % FAMILY_COLORS.length].bg}`} aria-hidden="true" />
+                  {selectedFamily.name} <X className="h-3 w-3 ml-1" aria-hidden="true" />
+                </button>
               )}
               {selectedTags.map((tag) => (
-                <Badge
+                <button
                   key={tag}
-                  variant="secondary"
-                  className="cursor-pointer hover:bg-secondary/80"
+                  type="button"
                   onClick={() => toggleTag(tag)}
+                  aria-label={`Remove ${tag} filter`}
+                  className="inline-flex items-center rounded-full border border-transparent bg-secondary text-secondary-foreground px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-secondary/80"
                 >
-                  {tag} ×
-                </Badge>
+                  {tag} <X className="h-3 w-3 ml-1" aria-hidden="true" />
+                </button>
               ))}
               <Button
                 variant="ghost"

@@ -177,7 +177,7 @@ export default function GraphPage() {
                           >
                             <Avatar className="h-10 w-10">
                               {personA.photo && (
-                                <AvatarImage src={personA.photo} alt={personA.firstName} />
+                                <AvatarImage src={personA.photo} alt={`Photo of ${personA.firstName} ${personA.lastName}`} />
                               )}
                               <AvatarFallback className="text-sm bg-primary/10 text-primary">
                                 {getInitials(personA.firstName, personA.lastName)}
@@ -193,7 +193,7 @@ export default function GraphPage() {
                           {/* Relationship */}
                           <div className="flex flex-col items-center gap-1 px-4">
                             <RelationshipBadge type={rel.type} />
-                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                            <ArrowRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                           </div>
 
                           {/* Person B */}
@@ -208,7 +208,7 @@ export default function GraphPage() {
                             </div>
                             <Avatar className="h-10 w-10">
                               {personB.photo && (
-                                <AvatarImage src={personB.photo} alt={personB.firstName} />
+                                <AvatarImage src={personB.photo} alt={`Photo of ${personB.firstName} ${personB.lastName}`} />
                               )}
                               <AvatarFallback className="text-sm bg-primary/10 text-primary">
                                 {getInitials(personB.firstName, personB.lastName)}
@@ -237,7 +237,7 @@ export default function GraphPage() {
                         <div className="flex items-center gap-3">
                           <Avatar className="h-12 w-12">
                             {person.photo && (
-                              <AvatarImage src={person.photo} alt={person.firstName} />
+                              <AvatarImage src={person.photo} alt={`Photo of ${person.firstName} ${person.lastName}`} />
                             )}
                             <AvatarFallback className="bg-primary/10 text-primary">
                               {getInitials(person.firstName, person.lastName)}
@@ -267,6 +267,7 @@ export default function GraphPage() {
                                 >
                                   <span
                                     className={`h-2 w-2 rounded-full ${color}`}
+                                    aria-hidden="true"
                                   />
                                   {config?.label || conn.type}: {conn.name.split(" ")[0]}
                                 </Badge>

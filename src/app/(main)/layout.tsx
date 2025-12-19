@@ -11,7 +11,7 @@ export default function MainLayout({
       <ThemeProvider>
         <div className="min-h-screen bg-background">
           <Header />
-          <main className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
+          <main id="main-content" className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
             <ErrorBoundary>
               {children}
             </ErrorBoundary>

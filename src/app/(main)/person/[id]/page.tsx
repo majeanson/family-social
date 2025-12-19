@@ -122,9 +122,9 @@ export default function PersonProfilePage({ params }: PageProps) {
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row items-start gap-6">
             {/* Avatar */}
-            <div className="relative">
-              <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
-                {person.photo && <AvatarImage src={person.photo} alt={person.firstName} />}
+            <div className="relative mx-auto sm:mx-0">
+              <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-background shadow-lg">
+                {person.photo && <AvatarImage src={person.photo} alt={`Photo of ${person.firstName} ${person.lastName}`} />}
                 <AvatarFallback className={cn(
                   "text-3xl",
                   familyColor ? `${familyColor.bg} text-white` : "bg-primary/10 text-primary"
@@ -164,7 +164,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                     </p>
                   )}
                 </div>
-                <div className="flex gap-2 flex-wrap justify-end">
+                <div className="flex flex-col sm:flex-row gap-2 sm:justify-end w-full sm:w-auto mt-4 sm:mt-0">
                   {!isThisPersonMe && (
                     <Button variant="outline" onClick={handleSetAsMe} title="Set this person as Me">
                       <Crown className="h-4 w-4 mr-2" />
@@ -295,7 +295,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                         >
                           <Avatar className="h-12 w-12">
                             {relatedPerson.photo && (
-                              <AvatarImage src={relatedPerson.photo} alt={relatedPerson.firstName} />
+                              <AvatarImage src={relatedPerson.photo} alt={`Photo of ${relatedPerson.firstName} ${relatedPerson.lastName}`} />
                             )}
                             <AvatarFallback className="bg-primary/10 text-primary">
                               {getInitials(relatedPerson.firstName, relatedPerson.lastName)}
@@ -306,13 +306,13 @@ export default function PersonProfilePage({ params }: PageProps) {
                               {relatedPerson.firstName} {relatedPerson.lastName}
                             </p>
                             <div className="flex items-center gap-1.5">
-                              <span className={`h-2 w-2 rounded-full ${color}`} />
+                              <span className={`h-2 w-2 rounded-full ${color}`} aria-hidden="true" />
                               <span className="text-sm text-muted-foreground">
                                 {config?.label || relationType}
                               </span>
                             </div>
                           </div>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                         </Link>
                       );
                     })}
@@ -338,7 +338,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                         >
                           <Avatar className="h-12 w-12">
                             {relatedPerson.photo && (
-                              <AvatarImage src={relatedPerson.photo} alt={relatedPerson.firstName} />
+                              <AvatarImage src={relatedPerson.photo} alt={`Photo of ${relatedPerson.firstName} ${relatedPerson.lastName}`} />
                             )}
                             <AvatarFallback className="bg-primary/10 text-primary">
                               {getInitials(relatedPerson.firstName, relatedPerson.lastName)}
@@ -349,13 +349,13 @@ export default function PersonProfilePage({ params }: PageProps) {
                               {relatedPerson.firstName} {relatedPerson.lastName}
                             </p>
                             <div className="flex items-center gap-1.5">
-                              <span className={`h-2 w-2 rounded-full ${color}`} />
+                              <span className={`h-2 w-2 rounded-full ${color}`} aria-hidden="true" />
                               <span className="text-sm text-muted-foreground">
                                 {config?.label || relationType}
                               </span>
                             </div>
                           </div>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                         </Link>
                       );
                     })}
@@ -381,9 +381,9 @@ export default function PersonProfilePage({ params }: PageProps) {
                         >
                           <Avatar className="h-12 w-12">
                             {relatedPerson.photo && (
-                              <AvatarImage src={relatedPerson.photo} alt={relatedPerson.firstName} />
+                              <AvatarImage src={relatedPerson.photo} alt={`Photo of ${relatedPerson.firstName} ${relatedPerson.lastName}`} />
                             )}
-                            <AvatarFallback className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            <AvatarFallback className="bg-primary/10 text-primary">
                               {getInitials(relatedPerson.firstName, relatedPerson.lastName)}
                             </AvatarFallback>
                           </Avatar>
@@ -392,13 +392,13 @@ export default function PersonProfilePage({ params }: PageProps) {
                               {relatedPerson.firstName} {relatedPerson.lastName}
                             </p>
                             <div className="flex items-center gap-1.5">
-                              <span className={`h-2 w-2 rounded-full ${color}`} />
+                              <span className={`h-2 w-2 rounded-full ${color}`} aria-hidden="true" />
                               <span className="text-sm text-muted-foreground">
                                 {config?.label || relationType}
                               </span>
                             </div>
                           </div>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                         </Link>
                       );
                     })}
@@ -424,7 +424,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                         >
                           <Avatar className="h-12 w-12">
                             {relatedPerson.photo && (
-                              <AvatarImage src={relatedPerson.photo} alt={relatedPerson.firstName} />
+                              <AvatarImage src={relatedPerson.photo} alt={`Photo of ${relatedPerson.firstName} ${relatedPerson.lastName}`} />
                             )}
                             <AvatarFallback className="bg-muted text-muted-foreground">
                               {getInitials(relatedPerson.firstName, relatedPerson.lastName)}
@@ -435,13 +435,13 @@ export default function PersonProfilePage({ params }: PageProps) {
                               {relatedPerson.firstName} {relatedPerson.lastName}
                             </p>
                             <div className="flex items-center gap-1.5">
-                              <span className={`h-2 w-2 rounded-full ${color}`} />
+                              <span className={`h-2 w-2 rounded-full ${color}`} aria-hidden="true" />
                               <span className="text-sm text-muted-foreground">
                                 {config?.label || relationType}
                               </span>
                             </div>
                           </div>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                         </Link>
                       );
                     })}

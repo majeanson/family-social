@@ -229,15 +229,15 @@ function EditPersonFormContent({
           </h3>
 
           {/* Photo and Name Row */}
-          <div className="flex items-start gap-4">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
             <PhotoUpload
               value={photo}
               onChange={setPhoto}
               initials={`${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "?"}
               size="lg"
             />
-            <div className="flex-1 space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex-1 w-full space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">
                     First Name <span className="text-destructive">*</span>
@@ -283,7 +283,7 @@ function EditPersonFormContent({
             Contact Information
           </h3>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -430,12 +430,12 @@ function EditPersonFormContent({
 
           {/* Add new relationship */}
           {availablePeople.length > 0 && (
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Select
                 value={newRelationshipPersonId}
                 onValueChange={setNewRelationshipPersonId}
               >
-                <SelectTrigger className="flex-1">
+                <SelectTrigger className="w-full sm:flex-1">
                   <SelectValue placeholder="Select person..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -446,7 +446,7 @@ function EditPersonFormContent({
                   ))}
                 </SelectContent>
               </Select>
-              <div className="w-40">
+              <div className="w-full sm:w-40">
                 <RelationshipSelector
                   value={newRelationshipType}
                   onValueChange={setNewRelationshipType}
@@ -457,6 +457,8 @@ function EditPersonFormContent({
                 variant="outline"
                 onClick={handleAddRelationship}
                 disabled={!newRelationshipPersonId}
+                className="w-full sm:w-auto"
+                aria-label="Add relationship"
               >
                 <Plus className="h-4 w-4" />
               </Button>
