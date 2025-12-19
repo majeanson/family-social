@@ -1,5 +1,11 @@
-import { kv } from "@vercel/kv";
+import { Redis } from "@upstash/redis";
 import { NextRequest, NextResponse } from "next/server";
+
+// Initialize Redis client
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+});
 
 // Generate a short, URL-safe code
 function generateCode(length = 8): string {
@@ -51,7 +57,7 @@ export async function POST(request: NextRequest) {
     let code = generateCode();
     let attempts = 0;
     while (attempts < 5) {
-      const existing = await kv.get(`share:${code}`);
+      const existing = await redis.get(`share:${code}`);
       if (!existing) break;
       code = generateCode();
       attempts++;
@@ -65,8 +71,8 @@ export async function POST(request: NextRequest) {
       expiresAt: new Date(now.getTime() + expirySeconds * 1000).toISOString(),
     };
 
-    // Store with TTL
-    await kv.set(`share:${code}`, JSON.stringify(shareData), { ex: expirySeconds });
+    // Store with TTL (ex = expire in seconds)
+    await redis.set(`share:${code}`, JSON.stringify(shareData), { ex: expirySeconds });
 
     return NextResponse.json({
       code,

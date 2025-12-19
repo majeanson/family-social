@@ -1,6 +1,12 @@
-import { kv } from "@vercel/kv";
+import { Redis } from "@upstash/redis";
 import { NextRequest, NextResponse } from "next/server";
 import type { ShareData } from "../route";
+
+// Initialize Redis client
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+});
 
 export async function GET(
   request: NextRequest,
@@ -16,7 +22,7 @@ export async function GET(
       );
     }
 
-    const data = await kv.get(`share:${code}`);
+    const data = await redis.get(`share:${code}`);
 
     if (!data) {
       return NextResponse.json(
@@ -45,7 +51,7 @@ export async function DELETE(
 ) {
   try {
     const { code } = await params;
-    await kv.del(`share:${code}`);
+    await redis.del(`share:${code}`);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to delete share:", error);
