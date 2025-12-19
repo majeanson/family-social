@@ -81,13 +81,13 @@ export default function FormsPage() {
   };
 
   const copyShareLink = (template: FormTemplate) => {
-    const url = generateShareableUrl(template);
+    const url = generateShareableUrl(template, window.location.origin);
     navigator.clipboard.writeText(url);
-    toast.success("Link copied to clipboard! Anyone with this link can fill out the form.");
+    toast.success("Link copied! Anyone with this link can fill out the form.");
   };
 
   const openPreview = (template: FormTemplate) => {
-    const url = generateShareableUrl(template);
+    const url = generateShareableUrl(template, window.location.origin);
     window.open(url, "_blank");
   };
 
