@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { decodeFormTemplate } from "@/lib/form-encoding";
+import { decodeFormTemplate, generateImportUrl, type PersonResponseData } from "@/lib/form-encoding";
 import { sanitizeFilename } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +29,8 @@ import {
   MessageCircle,
   ArrowLeft,
   Mail,
+  Link,
+  Sparkles,
 } from "lucide-react";
 
 function ShareFormContent() {
@@ -126,6 +128,42 @@ function ShareFormContent() {
     const subject = encodeURIComponent(`${template?.name} - My Information`);
     const body = encodeURIComponent(formatAsText());
     window.open(`mailto:?subject=${subject}&body=${body}`);
+  };
+
+  const getImportLink = () => {
+    const personData: PersonResponseData = {
+      firstName: formData["firstName"] || "",
+      lastName: formData["lastName"],
+      nickname: formData["nickname"],
+      email: formData["email"],
+      phone: formData["phone"],
+      birthday: formData["birthday"],
+      notes: formData["notes"],
+    };
+    return generateImportUrl(personData);
+  };
+
+  const handleCopyImportLink = () => {
+    const link = getImportLink();
+    navigator.clipboard.writeText(link);
+    toast.success("Import link copied! Send this link back and they can add you with one click.");
+  };
+
+  const handleShareImportLink = async () => {
+    const link = getImportLink();
+    try {
+      await navigator.share({
+        title: "Add me to your contacts",
+        text: `Click this link to add my info: ${link}`,
+        url: link,
+      });
+      setStep("done");
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        // Fall back to copying
+        handleCopyImportLink();
+      }
+    }
   };
 
   const handleInputChange = (fieldKey: string, value: string) => {
@@ -239,16 +277,48 @@ function ShareFormContent() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {/* Primary: Native Share or Copy */}
+              {/* Recommended: Import Link */}
+              <div className="relative">
+                <div className="absolute -top-2 left-3 px-2 bg-card">
+                  <span className="text-xs text-primary font-medium flex items-center gap-1">
+                    <Sparkles className="h-3 w-3" />
+                    Recommended
+                  </span>
+                </div>
+                <Button
+                  className="w-full h-auto py-4 border-2 border-primary"
+                  variant="outline"
+                  onClick={canNativeShare ? handleShareImportLink : handleCopyImportLink}
+                >
+                  <div className="flex items-center gap-3">
+                    <Link className="h-5 w-5 text-primary" />
+                    <div className="text-left">
+                      <div className="font-semibold">Send Quick-Add Link</div>
+                      <div className="text-xs opacity-80">
+                        One click adds you to their contacts
+                      </div>
+                    </div>
+                  </div>
+                </Button>
+              </div>
+
+              <Separator />
+
+              <p className="text-xs text-muted-foreground text-center">
+                Other ways to share
+              </p>
+
+              {/* Secondary: Native Share or Copy Text */}
               {canNativeShare ? (
                 <Button
-                  className="w-full h-auto py-4"
+                  className="w-full h-auto py-3"
+                  variant="outline"
                   onClick={handleNativeShare}
                 >
                   <div className="flex items-center gap-3">
-                    <Share2 className="h-5 w-5" />
+                    <Share2 className="h-4 w-4" />
                     <div className="text-left">
-                      <div className="font-semibold">Share via...</div>
+                      <div className="font-medium text-sm">Share as Text</div>
                       <div className="text-xs opacity-80">
                         Message, WhatsApp, Email, etc.
                       </div>
@@ -257,16 +327,17 @@ function ShareFormContent() {
                 </Button>
               ) : (
                 <Button
-                  className="w-full h-auto py-4"
+                  className="w-full h-auto py-3"
+                  variant="outline"
                   onClick={() => {
                     handleCopyText();
                     setStep("done");
                   }}
                 >
                   <div className="flex items-center gap-3">
-                    <MessageCircle className="h-5 w-5" />
+                    <MessageCircle className="h-4 w-4" />
                     <div className="text-left">
-                      <div className="font-semibold">Copy & Send in a Message</div>
+                      <div className="font-medium text-sm">Copy & Send in a Message</div>
                       <div className="text-xs opacity-80">
                         Paste into any chat or message app
                       </div>
@@ -274,12 +345,6 @@ function ShareFormContent() {
                   </div>
                 </Button>
               )}
-
-              <Separator />
-
-              <p className="text-xs text-muted-foreground text-center">
-                Other ways to share
-              </p>
 
               <div className="grid grid-cols-2 gap-2">
                 <Button

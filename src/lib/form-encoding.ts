@@ -137,3 +137,80 @@ export function generateShareableUrl(template: FormTemplate, baseUrl?: string): 
   const base = baseUrl || (typeof window !== "undefined" ? window.location.origin : "");
   return `${base}/share/form?data=${encoded}`;
 }
+
+// Person response data structure (minimal for URL encoding)
+export interface PersonResponseData {
+  firstName: string;
+  lastName?: string;
+  nickname?: string;
+  email?: string;
+  phone?: string;
+  birthday?: string;
+  photo?: string;
+  notes?: string;
+}
+
+// Encode person response data for import URL
+export function encodePersonResponse(data: PersonResponseData): string {
+  // Use very short keys to minimize URL length
+  const minified: Record<string, string> = { f: data.firstName };
+  if (data.lastName) minified.l = data.lastName;
+  if (data.nickname) minified.n = data.nickname;
+  if (data.email) minified.e = data.email;
+  if (data.phone) minified.p = data.phone;
+  if (data.birthday) minified.b = data.birthday;
+  if (data.notes) minified.o = data.notes;
+  // Skip photo - too large for URLs
+
+  const json = JSON.stringify(minified);
+
+  try {
+    const compressed = compressString(json);
+    return "1" + compressed.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  } catch {
+    const base64 = btoa(unescape(encodeURIComponent(json)));
+    return "0" + base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+}
+
+// Decode person response data from import URL
+export function decodePersonResponse(encoded: string): PersonResponseData | null {
+  try {
+    const version = encoded[0];
+    let base64 = encoded.slice(1).replace(/-/g, "+").replace(/_/g, "/");
+    while (base64.length % 4) {
+      base64 += "=";
+    }
+
+    let json: string;
+    if (version === "1") {
+      json = decompressString(base64);
+    } else if (version === "0") {
+      json = decodeURIComponent(escape(atob(base64)));
+    } else {
+      return null;
+    }
+
+    const minified = JSON.parse(json);
+
+    return {
+      firstName: minified.f,
+      lastName: minified.l,
+      nickname: minified.n,
+      email: minified.e,
+      phone: minified.p,
+      birthday: minified.b,
+      notes: minified.o,
+    };
+  } catch (error) {
+    console.error("Failed to decode person response:", error);
+    return null;
+  }
+}
+
+// Generate an import URL that auto-adds a person when clicked
+export function generateImportUrl(data: PersonResponseData, baseUrl?: string): string {
+  const encoded = encodePersonResponse(data);
+  const base = baseUrl || (typeof window !== "undefined" ? window.location.origin : "");
+  return `${base}/import?data=${encoded}`;
+}
