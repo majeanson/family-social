@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useDataStore } from "@/stores/data-store";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,9 +11,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Toaster } from "@/components/ui/sonner";
 import {
   CheckCircle2,
   AlertCircle,
@@ -23,47 +22,58 @@ import {
   Mail,
   Phone,
   StickyNote,
+  Clock,
+  Loader2,
 } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 
-// Simple query param based person data
-interface PersonData {
+interface ShareData {
   firstName: string;
   lastName?: string;
   nickname?: string;
   email?: string;
   phone?: string;
   birthday?: string;
+  photo?: string;
   notes?: string;
+  createdAt: string;
+  expiresAt: string;
 }
 
-function parsePersonFromParams(params: URLSearchParams): PersonData | null {
-  const firstName = params.get("f") || params.get("firstName");
-  if (!firstName) return null;
-
-  return {
-    firstName,
-    lastName: params.get("l") || params.get("lastName") || undefined,
-    nickname: params.get("n") || params.get("nickname") || undefined,
-    email: params.get("e") || params.get("email") || undefined,
-    phone: params.get("p") || params.get("phone") || undefined,
-    birthday: params.get("b") || params.get("birthday") || undefined,
-    notes: params.get("o") || params.get("notes") || undefined,
-  };
-}
-
-function ImportContent() {
-  const searchParams = useSearchParams();
+export default function ImportCodePage() {
+  const params = useParams();
   const router = useRouter();
+  const code = params.code as string;
+
   const { addPerson, people } = useDataStore();
-
-  // Parse person data from URL params (simple approach)
-  const personData = parsePersonFromParams(searchParams);
-
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [personData, setPersonData] = useState<ShareData | null>(null);
   const [imported, setImported] = useState(false);
   const [existingPerson, setExistingPerson] = useState<string | null>(null);
 
-  // Check if person already exists
+  // Fetch share data
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const res = await fetch(`/api/share/${code}`);
+        if (!res.ok) {
+          const data = await res.json();
+          setError(data.error || "Link not found or expired");
+          return;
+        }
+        const data = await res.json();
+        setPersonData(data);
+      } catch {
+        setError("Failed to load share data");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [code]);
+
+  // Check for existing person
   useEffect(() => {
     if (personData) {
       const existing = people.find(
@@ -87,13 +97,14 @@ function ImportContent() {
       email: personData.email,
       phone: personData.phone,
       birthday: personData.birthday,
+      photo: personData.photo,
       notes: personData.notes,
       tags: [],
       customFields: [],
     });
 
     setImported(true);
-    toast.success(`${personData.firstName} has been added to your people!`);
+    toast.success(`${personData.firstName} has been added!`);
   };
 
   const handleViewPeople = () => {
@@ -104,19 +115,32 @@ function ImportContent() {
     router.push(`/person/${id}`);
   };
 
-  if (!personData) {
+  // Loading state
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Toaster />
+        <Card className="max-w-md w-full">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading contact info...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !personData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="max-w-md w-full">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 rounded-full bg-destructive/10 p-3">
               <AlertCircle className="h-8 w-8 text-destructive" />
             </div>
-            <CardTitle>Invalid Import Link</CardTitle>
+            <CardTitle>Link Expired or Invalid</CardTitle>
             <CardDescription>
-              This link is missing required information (first name).
-              Please ask for a new link.
+              {error || "This share link is no longer available. Please ask for a new link."}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -129,10 +153,10 @@ function ImportContent() {
     );
   }
 
+  // Success state
   if (imported) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Toaster />
         <Card className="max-w-md w-full">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 rounded-full bg-green-500/10 p-3">
@@ -155,28 +179,36 @@ function ImportContent() {
   }
 
   const initials = getInitials(personData.firstName, personData.lastName || "");
+  const expiresAt = new Date(personData.expiresAt);
+  const timeLeft = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60)));
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
-      <Toaster />
       <div className="max-w-lg mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
           <div className="mx-auto w-fit rounded-full bg-primary/10 p-3 mb-4">
             <UserPlus className="h-6 w-6 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold">Add New Person</h1>
+          <h1 className="text-2xl font-bold">Add Contact</h1>
           <p className="text-muted-foreground">
-            Someone shared their contact info with you
+            Someone shared their info with you
           </p>
+        </div>
+
+        {/* Expiry notice */}
+        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <Clock className="h-4 w-4" />
+          <span>
+            Link expires in {timeLeft > 24 ? `${Math.ceil(timeLeft / 24)} days` : `${timeLeft} hours`}
+          </span>
         </div>
 
         {/* Duplicate Warning */}
         {existingPerson && (
           <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-4">
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              <strong>Note:</strong> A person named {personData.firstName} {personData.lastName} already exists.
-              You can still add this as a new person if needed.
+              <strong>Note:</strong> {personData.firstName} {personData.lastName} already exists.
             </p>
             <Button
               variant="outline"
@@ -184,7 +216,7 @@ function ImportContent() {
               className="mt-2"
               onClick={() => handleViewPerson(existingPerson)}
             >
-              View Existing Person
+              View Existing
             </Button>
           </div>
         )}
@@ -194,6 +226,9 @@ function ImportContent() {
           <CardHeader>
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
+                {personData.photo && (
+                  <AvatarImage src={personData.photo} alt={personData.firstName} />
+                )}
                 <AvatarFallback className="bg-primary/10 text-primary text-xl">
                   {initials}
                 </AvatarFallback>
@@ -252,26 +287,7 @@ function ImportContent() {
             Cancel
           </Button>
         </div>
-
-        {/* Privacy Note */}
-        <p className="text-center text-xs text-muted-foreground">
-          This person will be added to your local data only
-        </p>
       </div>
     </div>
-  );
-}
-
-export default function ImportPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <div className="text-muted-foreground">Loading...</div>
-        </div>
-      }
-    >
-      <ImportContent />
-    </Suspense>
   );
 }

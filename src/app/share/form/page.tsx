@@ -3,7 +3,6 @@
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { decodeFormTemplate } from "@/lib/form-encoding";
-import { sanitizeFilename } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,7 +15,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PhotoUpload } from "@/components/ui/photo-upload";
-import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import {
@@ -24,148 +29,76 @@ import {
   FileText,
   AlertCircle,
   Copy,
-  Download,
   Share2,
-  MessageCircle,
   ArrowLeft,
-  Mail,
-  Link,
-  Sparkles,
+  Clock,
+  Loader2,
+  Link as LinkIcon,
 } from "lucide-react";
 
 function ShareFormContent() {
   const searchParams = useSearchParams();
   const data = searchParams.get("data");
   const template = data ? decodeFormTemplate(data) : null;
-  const [step, setStep] = useState<"form" | "preview" | "done">("form");
+
+  const [step, setStep] = useState<"form" | "creating" | "done">("form");
   const [formData, setFormData] = useState<Record<string, string>>({});
+  const [expiry, setExpiry] = useState("24h");
+  const [shareLink, setShareLink] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
+
   const canNativeShare = typeof window !== "undefined" && !!navigator?.share;
 
-  const formatAsText = () => {
-    if (!template) return "";
-
-    const lines = [
-      `📋 ${template.name}`,
-      `Submitted: ${new Date().toLocaleDateString()}`,
-      "",
-      "---",
-      "",
-    ];
-
-    template.fields
-      .sort((a, b) => a.order - b.order)
-      .forEach((field) => {
-        const value = formData[field.fieldKey] || "(not provided)";
-        lines.push(`${field.label}: ${value}`);
-      });
-
-    lines.push("");
-    lines.push("---");
-    lines.push("Sent via Family Social");
-
-    return lines.join("\n");
-  };
-
-  const formatAsJSON = () => {
-    return JSON.stringify(
-      {
-        formName: template?.name,
-        submittedAt: new Date().toISOString(),
-        responses: template?.fields
-          .sort((a, b) => a.order - b.order)
-          .reduce((acc, field) => {
-            acc[field.label] = formData[field.fieldKey] || null;
-            return acc;
-          }, {} as Record<string, string | null>),
-      },
-      null,
-      2
-    );
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStep("preview");
-  };
+    setStep("creating");
 
-  const handleCopyText = () => {
-    navigator.clipboard.writeText(formatAsText());
-    toast.success("Copied! Now paste this in a message to send it back.");
-  };
-
-  const handleCopyJSON = () => {
-    navigator.clipboard.writeText(formatAsJSON());
-    toast.success("JSON copied to clipboard!");
-  };
-
-  const handleDownload = () => {
-    const blob = new Blob([formatAsJSON()], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const name = sanitizeFilename(formData["firstName"] || "response");
-    a.href = url;
-    a.download = `family-info-${name}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("File downloaded! Send this file back to who requested it.");
-  };
-
-  const handleNativeShare = async () => {
     try {
-      await navigator.share({
-        title: `${template?.name} - Response`,
-        text: formatAsText(),
+      const response = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          data: {
+            firstName: formData["firstName"] || "",
+            lastName: formData["lastName"],
+            nickname: formData["nickname"],
+            email: formData["email"],
+            phone: formData["phone"],
+            birthday: formData["birthday"],
+            photo: formData["photo"],
+            notes: formData["notes"],
+          },
+          expiry,
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error("Failed to create share link");
+      }
+
+      const result = await response.json();
+      const fullUrl = `${window.location.origin}${result.url}`;
+      setShareLink(fullUrl);
+      setExpiresAt(result.expiresAt);
       setStep("done");
     } catch (error) {
-      if ((error as Error).name !== "AbortError") {
-        toast.error("Sharing failed. Try copying instead.");
-      }
+      console.error(error);
+      toast.error("Failed to create share link. Please try again.");
+      setStep("form");
     }
   };
 
-  const handleEmailShare = () => {
-    const subject = encodeURIComponent(`${template?.name} - My Information`);
-    const body = encodeURIComponent(formatAsText());
-    window.open(`mailto:?subject=${subject}&body=${body}`);
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(shareLink);
+    toast.success("Link copied!");
   };
 
-  const getImportLink = () => {
-    // Build simple query string - much more reliable than encoding
-    const params = new URLSearchParams();
-
-    // Required field
-    const firstName = formData["firstName"];
-    if (firstName) params.set("f", firstName);
-
-    // Optional fields - only add if present
-    if (formData["lastName"]) params.set("l", formData["lastName"]);
-    if (formData["nickname"]) params.set("n", formData["nickname"]);
-    if (formData["email"]) params.set("e", formData["email"]);
-    if (formData["phone"]) params.set("p", formData["phone"]);
-    if (formData["birthday"]) params.set("b", formData["birthday"]);
-    if (formData["notes"]) params.set("o", formData["notes"]);
-
-    const base = typeof window !== "undefined" ? window.location.origin : "";
-    return `${base}/import?${params.toString()}`;
-  };
-
-  const handleCopyImportLink = () => {
-    const link = getImportLink();
-    navigator.clipboard.writeText(link);
-    toast.success("Link copied! Send this to add your info with one click.");
-  };
-
-  const handleShareImportLink = async () => {
-    const link = getImportLink();
+  const handleShare = async () => {
     try {
-      // Only share URL - don't include text to avoid duplication
-      await navigator.share({ url: link });
-      setStep("done");
+      await navigator.share({ url: shareLink });
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
-        // Fall back to copying
-        handleCopyImportLink();
+        handleCopyLink();
       }
     }
   };
@@ -174,6 +107,16 @@ function ShareFormContent() {
     setFormData((prev) => ({ ...prev, [fieldKey]: value }));
   };
 
+  const getExpiryLabel = () => {
+    const date = new Date(expiresAt);
+    const now = new Date();
+    const hours = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60));
+    if (hours <= 1) return "1 hour";
+    if (hours <= 24) return "24 hours";
+    return `${Math.ceil(hours / 24)} days`;
+  };
+
+  // Invalid template
   if (!template) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -185,8 +128,7 @@ function ShareFormContent() {
             </div>
             <CardTitle>Invalid Form Link</CardTitle>
             <CardDescription>
-              This form link appears to be invalid or corrupted.
-              Please ask for a new link.
+              This form link is invalid or expired. Please ask for a new link.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -194,47 +136,23 @@ function ShareFormContent() {
     );
   }
 
-  // Success/Done step
-  if (step === "done") {
+  // Creating link
+  if (step === "creating") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Toaster />
         <Card className="max-w-md w-full">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 rounded-full bg-green-500/10 p-3">
-              <CheckCircle2 className="h-8 w-8 text-green-500" />
-            </div>
-            <CardTitle>All Done!</CardTitle>
-            <CardDescription>
-              Your information has been shared. Thank you for taking the time to fill this out!
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button
-              className="w-full"
-              onClick={() => setStep("preview")}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Share Another Way
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                setStep("form");
-                setFormData({});
-              }}
-            >
-              Fill Out Again
-            </Button>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Creating your share link...</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  // Preview/Share step
-  if (step === "preview") {
+  // Link created - show it
+  if (step === "done") {
     return (
       <div className="min-h-screen bg-background py-8 px-4">
         <Toaster />
@@ -246,173 +164,55 @@ function ShareFormContent() {
             </div>
             <h1 className="text-2xl font-bold">Ready to Share!</h1>
             <p className="text-muted-foreground">
-              Choose how you&apos;d like to send your information back
+              Send this link to share your contact info
             </p>
           </div>
 
-          {/* Preview Card */}
+          {/* Link Card */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Your Information</CardTitle>
-              <CardDescription>Review before sharing</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-2 font-mono">
-                {template.fields
-                  .sort((a, b) => a.order - b.order)
-                  .map((field) => (
-                    <div key={field.id} className="flex justify-between gap-4">
-                      <span className="text-muted-foreground">{field.label}:</span>
-                      <span className="text-right font-medium">
-                        {formData[field.fieldKey] || "—"}
-                      </span>
-                    </div>
-                  ))}
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4" />
+                <span>Expires in {getExpiryLabel()}</span>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Share Options */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Send It Back</CardTitle>
-              <CardDescription>
-                Pick the easiest way for you to share this with whoever sent you the form
-              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Quick-Add Link - show the actual link */}
-              {formData["firstName"] && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    Quick-Add Link
-                  </div>
-                  <div className="bg-muted rounded-lg p-3 break-all text-xs font-mono text-muted-foreground">
-                    {getImportLink()}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      className="flex-1"
-                      onClick={handleCopyImportLink}
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copy Link
-                    </Button>
-                    {canNativeShare && (
-                      <Button
-                        variant="outline"
-                        onClick={handleShareImportLink}
-                      >
-                        <Share2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground text-center">
-                    Send this link — one click adds your info!
-                  </p>
-                </div>
-              )}
+            <CardContent className="space-y-4">
+              {/* Link display */}
+              <div className="bg-muted rounded-lg p-4 break-all font-mono text-sm">
+                {shareLink}
+              </div>
 
-              <Separator />
-
-              <p className="text-xs text-muted-foreground text-center">
-                Other ways to share
-              </p>
-
-              {/* Secondary: Native Share or Copy Text */}
-              {canNativeShare ? (
-                <Button
-                  className="w-full h-auto py-3"
-                  variant="outline"
-                  onClick={handleNativeShare}
-                >
-                  <div className="flex items-center gap-3">
-                    <Share2 className="h-4 w-4" />
-                    <div className="text-left">
-                      <div className="font-medium text-sm">Share as Text</div>
-                      <div className="text-xs opacity-80">
-                        Message, WhatsApp, Email, etc.
-                      </div>
-                    </div>
-                  </div>
-                </Button>
-              ) : (
-                <Button
-                  className="w-full h-auto py-3"
-                  variant="outline"
-                  onClick={() => {
-                    handleCopyText();
-                    setStep("done");
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <MessageCircle className="h-4 w-4" />
-                    <div className="text-left">
-                      <div className="font-medium text-sm">Copy & Send in a Message</div>
-                      <div className="text-xs opacity-80">
-                        Paste into any chat or message app
-                      </div>
-                    </div>
-                  </div>
-                </Button>
-              )}
-
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  className="h-auto py-3"
-                  onClick={handleCopyText}
-                >
+              {/* Actions */}
+              <div className="flex gap-2">
+                <Button className="flex-1" onClick={handleCopyLink}>
                   <Copy className="h-4 w-4 mr-2" />
-                  <span className="text-sm">Copy Text</span>
+                  Copy Link
                 </Button>
-
-                <Button
-                  variant="outline"
-                  className="h-auto py-3"
-                  onClick={handleEmailShare}
-                >
-                  <Mail className="h-4 w-4 mr-2" />
-                  <span className="text-sm">Email</span>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="h-auto py-3"
-                  onClick={handleDownload}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  <span className="text-sm">Download</span>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="h-auto py-3"
-                  onClick={handleCopyJSON}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  <span className="text-sm">Copy JSON</span>
-                </Button>
+                {canNativeShare && (
+                  <Button variant="outline" onClick={handleShare}>
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
 
-              <Separator />
-
-              <Button
-                variant="ghost"
-                className="w-full"
-                onClick={() => setStep("form")}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Go Back & Edit
-              </Button>
+              <p className="text-xs text-center text-muted-foreground">
+                When they click this link, they can add your info with one tap.
+              </p>
             </CardContent>
           </Card>
 
-          {/* Footer */}
-          <p className="text-center text-xs text-muted-foreground">
-            Your data is not stored anywhere — it&apos;s only shared when you choose to send it.
-          </p>
+          {/* Create another */}
+          <Button
+            variant="ghost"
+            className="w-full"
+            onClick={() => {
+              setStep("form");
+              setShareLink("");
+            }}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Edit & Create New Link
+          </Button>
         </div>
       </div>
     );
@@ -436,11 +236,13 @@ function ShareFormContent() {
 
         {/* Info Banner */}
         <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-4">
-          <p className="text-sm text-blue-800 dark:text-blue-200">
-            <strong>How this works:</strong> Fill out the form below, then you&apos;ll get
-            easy options to send your info back via message, email, or however you prefer.
-            No account needed!
-          </p>
+          <div className="flex items-start gap-3">
+            <LinkIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              Fill out the form below. We&apos;ll create a temporary link you can share.
+              The recipient can add your info with one click.
+            </p>
+          </div>
         </div>
 
         {/* Form */}
@@ -509,8 +311,23 @@ function ShareFormContent() {
                   </div>
                 ))}
 
+              {/* Expiry selection */}
+              <div className="space-y-2 pt-4 border-t">
+                <Label htmlFor="expiry">Link expires after</Label>
+                <Select value={expiry} onValueChange={setExpiry}>
+                  <SelectTrigger id="expiry">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1h">1 hour</SelectItem>
+                    <SelectItem value="24h">24 hours</SelectItem>
+                    <SelectItem value="7d">7 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <Button type="submit" className="w-full" size="lg">
-                Continue to Share
+                Create Share Link
               </Button>
             </form>
           </CardContent>
@@ -518,7 +335,7 @@ function ShareFormContent() {
 
         {/* Privacy Note */}
         <p className="text-center text-xs text-muted-foreground">
-          🔒 Your data stays on your device until you choose to share it
+          Your data is stored temporarily and automatically deleted after expiry.
         </p>
       </div>
     </div>
