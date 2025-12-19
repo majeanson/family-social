@@ -106,17 +106,24 @@ export function detectFamilyGroups(
  * Hook to get family groups and lookup functions
  */
 export function useFamilyGroups() {
-  const { people, relationships, settings } = useDataStore();
+  const { people, relationships, settings, updateSettings } = useDataStore();
 
   // Use colors from settings or defaults (ensure non-empty array)
   const colors = (settings.familyColors && settings.familyColors.length > 0)
     ? settings.familyColors
     : DEFAULT_FAMILY_COLORS;
 
-  const familyGroups = useMemo(
-    () => detectFamilyGroups(people, relationships),
-    [people, relationships]
-  );
+  // Get custom family names from settings
+  const customFamilyNames = settings.familyNames || {};
+
+  const familyGroups = useMemo(() => {
+    const groups = detectFamilyGroups(people, relationships);
+    // Apply custom names from settings
+    return groups.map(group => ({
+      ...group,
+      name: customFamilyNames[group.id] || group.name,
+    }));
+  }, [people, relationships, customFamilyNames]);
 
   // Map from person ID to their family group
   const personFamilyMap = useMemo(() => {
@@ -141,12 +148,26 @@ export function useFamilyGroups() {
     return personFamilyMap.get(personId) || null;
   };
 
+  // Rename a family group
+  const renameFamilyGroup = (groupId: string, newName: string) => {
+    const updatedNames = { ...customFamilyNames, [groupId]: newName.trim() };
+    updateSettings({ familyNames: updatedNames });
+  };
+
+  // Reset a family name to auto-generated default
+  const resetFamilyName = (groupId: string) => {
+    const { [groupId]: _, ...rest } = customFamilyNames;
+    updateSettings({ familyNames: Object.keys(rest).length > 0 ? rest : undefined });
+  };
+
   return {
     familyGroups,
     getFamilyColor,
     getFamilyGroup,
     personFamilyMap,
     colors,
+    renameFamilyGroup,
+    resetFamilyName,
   };
 }
 

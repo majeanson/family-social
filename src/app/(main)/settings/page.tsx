@@ -57,7 +57,11 @@ import {
   RotateCcw,
   Crown,
   X,
+  Pencil,
+  Check,
+  Users,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import type { AppSettings, PersonFormData, FamilyColorConfig, RelationshipType, CustomField } from "@/types";
 import { DEFAULT_FAMILY_COLORS, RELATIONSHIP_CONFIG, getGroupedRelationshipTypes } from "@/types";
 import { v4 as uuid } from "uuid";
@@ -201,7 +205,9 @@ export default function SettingsPage() {
     formTemplates,
     lastSaved,
   } = useDataStore();
-  const { familyGroups } = useFamilyGroups();
+  const { familyGroups, renameFamilyGroup, resetFamilyName } = useFamilyGroups();
+  const [editingFamilyId, setEditingFamilyId] = useState<string | null>(null);
+  const [editingFamilyName, setEditingFamilyName] = useState("");
   const { me, setAsMe, clearMe } = usePrimaryUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const responseFileInputRef = useRef<HTMLInputElement>(null);
@@ -662,72 +668,134 @@ Examples:
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Family Colors */}
+          {/* Family Groups */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label className="text-base">Family Group Colors</Label>
+              <Label className="text-base">Family Groups</Label>
               <Button variant="ghost" size="sm" onClick={handleResetColors}>
                 <RotateCcw className="h-4 w-4 mr-2" />
-                Reset to Default
+                Reset Colors
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              Colors are assigned to families in order. Family #{1} gets color 1, etc.
+              Customize family names and colors. Click the pencil to rename a family.
             </p>
 
-            <div className="grid gap-3">
-              {familyColors.slice(0, 8).map((color, index) => {
-                const family = familyGroups[index];
-                return (
-                  <div
-                    key={index}
-                    className="flex items-center gap-4 p-3 rounded-lg border bg-muted/30"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className={`w-8 h-8 rounded-full ${color.bg} flex-shrink-0`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium">
-                          {family ? family.name : `Family Color #${index + 1}`}
-                        </p>
-                        {family && (
-                          <p className="text-xs text-muted-foreground">
-                            {family.memberIds.size} members
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <Select
-                      value={color.bg}
-                      onValueChange={(value) => {
-                        const newColor = COLOR_OPTIONS.find((c) => c.bg === value);
-                        if (newColor) {
-                          handleChangeFamilyColor(index, {
-                            bg: newColor.bg,
-                            hex: newColor.hex,
-                            light: newColor.light,
-                            border: newColor.border,
-                          });
-                        }
-                      }}
+            {familyGroups.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                <p>No family groups yet</p>
+                <p className="text-xs mt-1">Add people with family relationships to create groups</p>
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {familyGroups.map((family, index) => {
+                  const color = familyColors[index % familyColors.length];
+                  const isEditing = editingFamilyId === family.id;
+
+                  return (
+                    <div
+                      key={family.id}
+                      className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30"
                     >
-                      <SelectTrigger className="w-[140px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {COLOR_OPTIONS.map((option) => (
-                          <SelectItem key={option.bg} value={option.bg}>
-                            <div className="flex items-center gap-2">
-                              <div className={`w-4 h-4 rounded-full ${option.bg}`} />
-                              <span>{option.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                );
-              })}
-            </div>
+                      <div className={`w-8 h-8 rounded-full ${color.bg} flex-shrink-0`} />
+
+                      {isEditing ? (
+                        <div className="flex-1 flex items-center gap-2">
+                          <Input
+                            value={editingFamilyName}
+                            onChange={(e) => setEditingFamilyName(e.target.value)}
+                            className="h-8"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                renameFamilyGroup(family.id, editingFamilyName);
+                                setEditingFamilyId(null);
+                                toast.success("Family name updated!");
+                              } else if (e.key === "Escape") {
+                                setEditingFamilyId(null);
+                              }
+                            }}
+                          />
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              renameFamilyGroup(family.id, editingFamilyName);
+                              setEditingFamilyId(null);
+                              toast.success("Family name updated!");
+                            }}
+                            aria-label="Save family name"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => setEditingFamilyId(null)}
+                            aria-label="Cancel editing"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{family.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {family.memberIds.size} members
+                            </p>
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              setEditingFamilyId(family.id);
+                              setEditingFamilyName(family.name);
+                            }}
+                            aria-label="Edit family name"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+
+                      <Select
+                        value={color.bg}
+                        onValueChange={(value) => {
+                          const newColor = COLOR_OPTIONS.find((c) => c.bg === value);
+                          if (newColor) {
+                            handleChangeFamilyColor(index, {
+                              bg: newColor.bg,
+                              hex: newColor.hex,
+                              light: newColor.light,
+                              border: newColor.border,
+                            });
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {COLOR_OPTIONS.map((option) => (
+                            <SelectItem key={option.bg} value={option.bg}>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-4 h-4 rounded-full ${option.bg}`} />
+                                <span>{option.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <Separator />

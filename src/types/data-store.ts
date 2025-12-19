@@ -26,6 +26,7 @@ export interface AppSettings {
   familyColors?: FamilyColorConfig[];
   relationshipColors?: Record<string, string>;
   primaryUserId?: string; // ID of the "Me" person
+  familyNames?: Record<string, string>; // Custom family names keyed by group root ID
 }
 
 // Default family color palette
