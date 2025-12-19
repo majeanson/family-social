@@ -53,7 +53,7 @@ export const PersonNode = memo(function PersonNode({
         style={{ opacity: styles.opacity }}
       >
         <Avatar className="h-8 w-8">
-          {person.photo && <AvatarImage src={person.photo} alt={displayName} />}
+          {person.photo && <AvatarImage src={person.photo} alt={`Photo of ${person.firstName} ${person.lastName}`} />}
           <AvatarFallback
             className={cn(
               "text-xs font-medium",
@@ -97,7 +97,7 @@ export const PersonNode = memo(function PersonNode({
             isFocused ? "h-16 w-16" : "h-14 w-14"
           )}
         >
-          {person.photo && <AvatarImage src={person.photo} alt={displayName} />}
+          {person.photo && <AvatarImage src={person.photo} alt={`Photo of ${person.firstName} ${person.lastName}`} />}
           <AvatarFallback
             className={cn(
               "text-lg font-medium",
@@ -134,7 +134,7 @@ export const PersonNode = memo(function PersonNode({
       {/* Birthday */}
       {showBirthday && birthday && (
         <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Calendar className="h-3 w-3" />
+          <Calendar className="h-3 w-3" aria-hidden="true" />
           <span>{birthday.shortDisplay}</span>
           {birthday.isToday && (
             <Badge variant="default" className="text-[10px] px-1 py-0 h-4">

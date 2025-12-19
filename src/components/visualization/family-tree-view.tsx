@@ -10,8 +10,25 @@ import {
 import { useFocusState } from "./hooks/use-focus-state";
 import { PersonNode, SpousePair } from "./person-node";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Home, ZoomIn, ZoomOut, Move } from "lucide-react";
+import { ArrowLeft, Home, ZoomIn, ZoomOut, Move, Hand } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Helper to get distance between two touch points
+function getTouchDistance(touches: React.TouchList): number {
+  if (touches.length < 2) return 0;
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+// Helper to get center point between two touches
+function getTouchCenter(touches: React.TouchList): { x: number; y: number } {
+  if (touches.length < 2) return { x: touches[0].clientX, y: touches[0].clientY };
+  return {
+    x: (touches[0].clientX + touches[1].clientX) / 2,
+    y: (touches[0].clientY + touches[1].clientY) / 2,
+  };
+}
 
 // Layout constants
 const GENERATION_HEIGHT = 220;
@@ -36,6 +53,10 @@ export function FamilyTreeView() {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  // Touch state for mobile
+  const [lastTouchDistance, setLastTouchDistance] = useState(0);
+  const [isTouching, setIsTouching] = useState(false);
 
   // Calculate node positions for each generation
   const { nodePositions, svgLines, contentBounds } = useMemo(() => {
@@ -192,6 +213,55 @@ export function FamilyTreeView() {
     }
   }, []);
 
+  // Touch event handlers for mobile
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      // Single finger - pan
+      setIsTouching(true);
+      setDragStart({ x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y });
+    } else if (e.touches.length === 2) {
+      // Two fingers - pinch zoom
+      setLastTouchDistance(getTouchDistance(e.touches));
+    }
+  }, [pan]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 1 && isTouching) {
+      // Single finger pan
+      e.preventDefault();
+      setPan({
+        x: e.touches[0].clientX - dragStart.x,
+        y: e.touches[0].clientY - dragStart.y,
+      });
+    } else if (e.touches.length === 2) {
+      // Pinch zoom
+      e.preventDefault();
+      const newDistance = getTouchDistance(e.touches);
+      if (lastTouchDistance > 0) {
+        const scale = newDistance / lastTouchDistance;
+        setZoom((z) => Math.max(0.4, Math.min(2, z * scale)));
+      }
+      setLastTouchDistance(newDistance);
+
+      // Also pan while zooming
+      const center = getTouchCenter(e.touches);
+      if (isTouching) {
+        setPan({
+          x: center.x - dragStart.x,
+          y: center.y - dragStart.y,
+        });
+      } else {
+        setIsTouching(true);
+        setDragStart({ x: center.x - pan.x, y: center.y - pan.y });
+      }
+    }
+  }, [isTouching, dragStart, lastTouchDistance, pan]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsTouching(false);
+    setLastTouchDistance(0);
+  }, []);
+
   // Center view on initial load or when focus changes
   useEffect(() => {
     if (focusPersonId && nodePositions.has(focusPersonId)) {
@@ -216,7 +286,7 @@ export function FamilyTreeView() {
   }
 
   return (
-    <div className="relative h-[700px] border rounded-lg bg-muted/20 overflow-hidden">
+    <div className="relative h-[500px] sm:h-[600px] lg:h-[700px] border rounded-lg bg-muted/20 overflow-hidden touch-none">
       {/* Controls */}
       <div className="absolute top-4 left-4 z-10 flex gap-2">
         <Button
@@ -293,13 +363,17 @@ export function FamilyTreeView() {
         ref={containerRef}
         className={cn(
           "w-full h-full",
-          isDragging ? "cursor-grabbing" : "cursor-grab"
+          isDragging || isTouching ? "cursor-grabbing" : "cursor-grab"
         )}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
       >
         <div
           className="relative"
@@ -385,9 +459,10 @@ export function FamilyTreeView() {
         </div>
       </div>
 
-      {/* Instructions */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-muted-foreground bg-background/80 backdrop-blur px-3 py-1.5 rounded-full">
-        Click a person to focus | Drag to pan | Ctrl+scroll to zoom
+      {/* Instructions - different for mobile vs desktop */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-muted-foreground bg-background/80 backdrop-blur px-3 py-1.5 rounded-full text-center">
+        <span className="hidden sm:inline">Click a person to focus | Drag to pan | Ctrl+scroll to zoom</span>
+        <span className="sm:hidden">Tap to focus | Drag to pan | Pinch to zoom</span>
       </div>
     </div>
   );
