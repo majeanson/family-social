@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { decodeFormTemplate, generateImportUrl, type PersonResponseData } from "@/lib/form-encoding";
+import { decodeFormTemplate } from "@/lib/form-encoding";
 import { sanitizeFilename } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -131,32 +131,36 @@ function ShareFormContent() {
   };
 
   const getImportLink = () => {
-    const personData: PersonResponseData = {
-      firstName: formData["firstName"] || "",
-      lastName: formData["lastName"],
-      nickname: formData["nickname"],
-      email: formData["email"],
-      phone: formData["phone"],
-      birthday: formData["birthday"],
-      notes: formData["notes"],
-    };
-    return generateImportUrl(personData);
+    // Build simple query string - much more reliable than encoding
+    const params = new URLSearchParams();
+
+    // Required field
+    const firstName = formData["firstName"];
+    if (firstName) params.set("f", firstName);
+
+    // Optional fields - only add if present
+    if (formData["lastName"]) params.set("l", formData["lastName"]);
+    if (formData["nickname"]) params.set("n", formData["nickname"]);
+    if (formData["email"]) params.set("e", formData["email"]);
+    if (formData["phone"]) params.set("p", formData["phone"]);
+    if (formData["birthday"]) params.set("b", formData["birthday"]);
+    if (formData["notes"]) params.set("o", formData["notes"]);
+
+    const base = typeof window !== "undefined" ? window.location.origin : "";
+    return `${base}/import?${params.toString()}`;
   };
 
   const handleCopyImportLink = () => {
     const link = getImportLink();
     navigator.clipboard.writeText(link);
-    toast.success("Import link copied! Send this link back and they can add you with one click.");
+    toast.success("Link copied! Send this to add your info with one click.");
   };
 
   const handleShareImportLink = async () => {
     const link = getImportLink();
     try {
-      await navigator.share({
-        title: "Add me to your contacts",
-        text: `Click this link to add my info: ${link}`,
-        url: link,
-      });
+      // Only share URL - don't include text to avoid duplication
+      await navigator.share({ url: link });
       setStep("done");
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
@@ -277,30 +281,38 @@ function ShareFormContent() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {/* Recommended: Import Link */}
-              <div className="relative">
-                <div className="absolute -top-2 left-3 px-2 bg-card">
-                  <span className="text-xs text-primary font-medium flex items-center gap-1">
-                    <Sparkles className="h-3 w-3" />
-                    Recommended
-                  </span>
-                </div>
-                <Button
-                  className="w-full h-auto py-4 border-2 border-primary"
-                  variant="outline"
-                  onClick={canNativeShare ? handleShareImportLink : handleCopyImportLink}
-                >
-                  <div className="flex items-center gap-3">
-                    <Link className="h-5 w-5 text-primary" />
-                    <div className="text-left">
-                      <div className="font-semibold">Send Quick-Add Link</div>
-                      <div className="text-xs opacity-80">
-                        One click adds you to their contacts
-                      </div>
-                    </div>
+              {/* Quick-Add Link - show the actual link */}
+              {formData["firstName"] && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    Quick-Add Link
                   </div>
-                </Button>
-              </div>
+                  <div className="bg-muted rounded-lg p-3 break-all text-xs font-mono text-muted-foreground">
+                    {getImportLink()}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1"
+                      onClick={handleCopyImportLink}
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy Link
+                    </Button>
+                    {canNativeShare && (
+                      <Button
+                        variant="outline"
+                        onClick={handleShareImportLink}
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Send this link — one click adds your info!
+                  </p>
+                </div>
+              )}
 
               <Separator />
 

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { decodePersonResponse } from "@/lib/form-encoding";
 import { useDataStore } from "@/stores/data-store";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import {
@@ -25,16 +23,43 @@ import {
   Mail,
   Phone,
   StickyNote,
-  User,
 } from "lucide-react";
 import { getInitials } from "@/lib/utils";
+
+// Simple query param based person data
+interface PersonData {
+  firstName: string;
+  lastName?: string;
+  nickname?: string;
+  email?: string;
+  phone?: string;
+  birthday?: string;
+  notes?: string;
+}
+
+function parsePersonFromParams(params: URLSearchParams): PersonData | null {
+  const firstName = params.get("f") || params.get("firstName");
+  if (!firstName) return null;
+
+  return {
+    firstName,
+    lastName: params.get("l") || params.get("lastName") || undefined,
+    nickname: params.get("n") || params.get("nickname") || undefined,
+    email: params.get("e") || params.get("email") || undefined,
+    phone: params.get("p") || params.get("phone") || undefined,
+    birthday: params.get("b") || params.get("birthday") || undefined,
+    notes: params.get("o") || params.get("notes") || undefined,
+  };
+}
 
 function ImportContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { addPerson, people } = useDataStore();
-  const data = searchParams.get("data");
-  const personData = data ? decodePersonResponse(data) : null;
+
+  // Parse person data from URL params (simple approach)
+  const personData = parsePersonFromParams(searchParams);
+
   const [imported, setImported] = useState(false);
   const [existingPerson, setExistingPerson] = useState<string | null>(null);
 
@@ -90,7 +115,7 @@ function ImportContent() {
             </div>
             <CardTitle>Invalid Import Link</CardTitle>
             <CardDescription>
-              This import link appears to be invalid or corrupted.
+              This link is missing required information (first name).
               Please ask for a new link.
             </CardDescription>
           </CardHeader>
@@ -178,7 +203,7 @@ function ImportContent() {
                   {personData.firstName} {personData.lastName}
                 </CardTitle>
                 {personData.nickname && (
-                  <CardDescription>"{personData.nickname}"</CardDescription>
+                  <CardDescription>&quot;{personData.nickname}&quot;</CardDescription>
                 )}
               </div>
             </div>
