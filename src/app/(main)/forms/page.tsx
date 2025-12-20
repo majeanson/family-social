@@ -80,10 +80,23 @@ export default function FormsPage() {
     );
   };
 
-  const copyShareLink = (template: FormTemplate) => {
+  const copyShareLink = async (template: FormTemplate) => {
     const url = generateShareableUrl(template, window.location.origin);
-    navigator.clipboard.writeText(url);
-    toast.success("Link copied! Anyone with this link can fill out the form.");
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied! Anyone with this link can fill out the form.");
+    } catch (err) {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement("textarea");
+      textArea.value = url;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      toast.success("Link copied!");
+    }
   };
 
   const openPreview = (template: FormTemplate) => {
