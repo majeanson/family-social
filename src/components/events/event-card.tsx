@@ -56,6 +56,25 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Calendar,
 };
 
+function getOrdinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function getAnniversaryYear(eventDate: string): number | null {
+  const date = new Date(eventDate);
+  const now = new Date();
+  const years = now.getFullYear() - date.getFullYear();
+
+  // Check if the anniversary has passed this year
+  const thisYearAnniversary = new Date(now.getFullYear(), date.getMonth(), date.getDate());
+  if (thisYearAnniversary > now) {
+    return years > 0 ? years : null;
+  }
+  return years > 0 ? years : null;
+}
+
 interface EventCardProps {
   event: FamilyEvent;
   showPeople?: boolean;
@@ -72,6 +91,7 @@ export const EventCard = memo(function EventCard({
   const Icon = ICON_MAP[config.icon] || Calendar;
   const associatedPeople = people.filter((p) => event.personIds.includes(p.id));
   const dateDisplay = formatDateDisplay(event.date);
+  const anniversaryYear = event.recurring ? getAnniversaryYear(event.date) : null;
 
   const handleDelete = () => {
     deleteEvent(event.id);
@@ -169,7 +189,11 @@ export const EventCard = memo(function EventCard({
           {event.recurring && (
             <Badge variant="secondary" className="gap-1 ml-auto">
               <RefreshCw className="h-3 w-3" />
-              {event.recurring.frequency === "yearly" ? "Yearly" : "Monthly"}
+              {anniversaryYear
+                ? `${getOrdinal(anniversaryYear)} year`
+                : event.recurring.frequency === "yearly"
+                ? "Yearly"
+                : "Monthly"}
             </Badge>
           )}
         </div>

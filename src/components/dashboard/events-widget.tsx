@@ -34,6 +34,12 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Calendar,
 };
 
+function getOrdinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
 function getNextOccurrence(dateStr: string): { date: Date; daysUntil: number } {
   const eventDate = new Date(dateStr);
   const now = new Date();
@@ -171,9 +177,15 @@ export const EventsWidget = memo(function EventsWidget() {
           const config = EVENT_TYPE_CONFIG[event.type];
           const Icon = ICON_MAP[config.icon] || Calendar;
 
+          // Calculate anniversary year for recurring events
+          const eventYear = new Date(event.date).getFullYear();
+          const nextYear = nextDate.getFullYear();
+          const anniversaryYear = event.recurring ? nextYear - eventYear : null;
+
           return (
-            <div
+            <Link
               key={event.id}
+              href="/events"
               className="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-muted/50 transition-colors"
             >
               <div className={cn("p-2 rounded-full", config.color, "text-white")}>
@@ -186,6 +198,7 @@ export const EventsWidget = memo(function EventsWidget() {
                     month: "short",
                     day: "numeric",
                   })}
+                  {anniversaryYear && anniversaryYear > 0 && ` · ${getOrdinal(anniversaryYear)} year`}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -200,7 +213,7 @@ export const EventsWidget = memo(function EventsWidget() {
                   <span className="text-sm text-muted-foreground">{daysUntil}d</span>
                 )}
               </div>
-            </div>
+            </Link>
           );
         })}
       </CardContent>
