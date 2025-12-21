@@ -242,7 +242,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                     <div>
                       <p className="font-medium">{birthday.display}</p>
                       <p className="text-muted-foreground">
-                        {birthday.age} years old
+                        {birthday.ageDisplay}
                         {birthday.isToday && " • Birthday today! 🎉"}
                         {birthday.isUpcoming && ` • In ${birthday.daysUntil} days`}
                       </p>

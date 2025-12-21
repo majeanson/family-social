@@ -6,9 +6,52 @@ export interface BirthdayInfo {
   display: string;
   shortDisplay: string;
   age: number;
+  ageDisplay: string; // Formatted age (e.g., "2 years old", "6 months old", "3 weeks old")
   daysUntil: number;
   isToday: boolean;
   isUpcoming: boolean; // Within 30 days
+}
+
+/**
+ * Format age appropriately based on how old someone is
+ * - < 1 month: show weeks
+ * - < 1 year: show months
+ * - >= 1 year: show years
+ */
+function formatAge(birthDate: Date, today: Date): { age: number; ageDisplay: string } {
+  const diffMs = today.getTime() - birthDate.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  // Calculate months difference
+  let months = (today.getFullYear() - birthDate.getFullYear()) * 12;
+  months += today.getMonth() - birthDate.getMonth();
+  if (today.getDate() < birthDate.getDate()) {
+    months--;
+  }
+
+  // Calculate years
+  let years = today.getFullYear() - birthDate.getFullYear();
+  const thisYearBirthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+  if (thisYearBirthday > today) {
+    years--;
+  }
+
+  // Less than 1 month old - show weeks
+  if (months < 1) {
+    const weeks = Math.floor(diffDays / 7);
+    if (weeks === 0) {
+      return { age: 0, ageDisplay: "newborn" };
+    }
+    return { age: 0, ageDisplay: `${weeks} ${weeks === 1 ? "week" : "weeks"} old` };
+  }
+
+  // Less than 1 year old - show months
+  if (years < 1) {
+    return { age: 0, ageDisplay: `${months} ${months === 1 ? "month" : "months"} old` };
+  }
+
+  // 1 year or older - show years
+  return { age: years, ageDisplay: `${years} ${years === 1 ? "year" : "years"} old` };
 }
 
 /**
@@ -25,14 +68,8 @@ export function getBirthdayInfo(birthday: string | undefined): BirthdayInfo | nu
     today.setHours(0, 0, 0, 0);
     const thisYear = today.getFullYear();
 
-    // Calculate age
-    let age = thisYear - date.getFullYear();
-    const thisYearBirthday = new Date(thisYear, date.getMonth(), date.getDate());
-    thisYearBirthday.setHours(0, 0, 0, 0);
-
-    if (thisYearBirthday > today) {
-      age--;
-    }
+    // Calculate age with proper formatting for infants
+    const { age, ageDisplay } = formatAge(date, today);
 
     // Calculate days until next birthday
     let nextBirthday = new Date(thisYear, date.getMonth(), date.getDate());
@@ -57,6 +94,7 @@ export function getBirthdayInfo(birthday: string | undefined): BirthdayInfo | nu
         day: "numeric",
       }),
       age,
+      ageDisplay,
       daysUntil: isToday ? 0 : daysUntil,
       isToday,
       isUpcoming: daysUntil <= 30 && daysUntil > 0,
