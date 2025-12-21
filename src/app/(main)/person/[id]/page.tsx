@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { RELATIONSHIP_CONFIG, EVENT_TYPE_CONFIG } from "@/types";
 import { getBirthdayInfo, formatDateDisplay } from "@/lib/date-utils";
 import { EditPersonDialog } from "@/components/people/edit-person-dialog";
+import { SharePersonDialog } from "@/components/people/share-person-dialog";
 import { FamilyBadge } from "@/components/people/family-badge";
 import { AddEventDialog } from "@/components/events";
 import { useFamilyGroups, usePrimaryUser } from "@/features";
@@ -37,6 +38,7 @@ import {
   Plus,
   FileQuestion,
   Send,
+  Share2,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -215,6 +217,15 @@ export default function PersonProfilePage({ params }: PageProps) {
                       </Link>
                     </Button>
                   )}
+                  <SharePersonDialog
+                    person={person}
+                    trigger={
+                      <Button variant="outline">
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Share
+                      </Button>
+                    }
+                  />
                   <Button variant="outline" onClick={() => setShowEditDialog(true)}>
                     <Edit className="h-4 w-4 mr-2" />
                     Edit

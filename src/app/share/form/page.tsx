@@ -46,11 +46,31 @@ function ShareFormContent() {
   const [expiry, setExpiry] = useState("24h");
   const [shareLink, setShareLink] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
+  const [missingFields, setMissingFields] = useState<string[]>([]);
+  const [showMissingWarning, setShowMissingWarning] = useState(false);
 
   const canNativeShare = typeof window !== "undefined" && !!navigator?.share;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Check which required fields are missing
+  const getMissingRequiredFields = (): string[] => {
+    if (!template) return [];
+    return template.fields
+      .filter((f) => f.required && !formData[f.fieldKey]?.trim())
+      .map((f) => f.label);
+  };
+
+  const handleSubmit = async (e: React.FormEvent, skipValidation = false) => {
     e.preventDefault();
+
+    // Check for missing fields
+    const missing = getMissingRequiredFields();
+    if (missing.length > 0 && !skipValidation) {
+      setMissingFields(missing);
+      setShowMissingWarning(true);
+      return;
+    }
+
+    setShowMissingWarning(false);
     setStep("creating");
 
     try {
@@ -245,16 +265,50 @@ function ShareFormContent() {
           </div>
         </div>
 
+        {/* Missing Fields Warning */}
+        {showMissingWarning && missingFields.length > 0 && (
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">
+                  Some fields are empty
+                </p>
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  Missing: {missingFields.join(", ")}
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-300 dark:border-amber-700"
+                    onClick={() => setShowMissingWarning(false)}
+                  >
+                    Go Back & Fill
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => handleSubmit(e, true)}
+                  >
+                    Skip & Continue Anyway
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Form */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Your Information</CardTitle>
             <CardDescription>
-              Fields marked with <span className="text-destructive">*</span> are required
+              Fields marked with <span className="text-destructive">*</span> are recommended
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={(e) => handleSubmit(e)} className="space-y-4">
               {template.fields
                 .sort((a, b) => a.order - b.order)
                 .map((field) => (
@@ -268,7 +322,6 @@ function ShareFormContent() {
                     {field.type === "textarea" ? (
                       <Textarea
                         id={field.fieldKey}
-                        required={field.required}
                         value={formData[field.fieldKey] || ""}
                         onChange={(e) =>
                           handleInputChange(field.fieldKey, e.target.value)
@@ -296,7 +349,6 @@ function ShareFormContent() {
                             ? "date"
                             : "text"
                         }
-                        required={field.required}
                         value={formData[field.fieldKey] || ""}
                         onChange={(e) =>
                           handleInputChange(field.fieldKey, e.target.value)
