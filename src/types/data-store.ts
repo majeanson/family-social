@@ -1,12 +1,14 @@
 import type { Person } from "./person";
 import type { Relationship } from "./relationship";
 import type { FormTemplate } from "./form-template";
+import type { FamilyEvent, ReminderTiming } from "./event";
 
 export interface DataStore {
   version: string;
   people: Person[];
   relationships: Relationship[];
   formTemplates: FormTemplate[];
+  events: FamilyEvent[];
   settings: AppSettings;
   exportedAt?: string;
 }
@@ -18,6 +20,22 @@ export interface FamilyColorConfig {
   border: string;
 }
 
+export interface NotificationSettings {
+  enabled: boolean;
+  birthdayReminders: boolean;
+  birthdayTiming: ReminderTiming;
+  eventReminders: boolean;
+  defaultEventTiming: ReminderTiming;
+}
+
+export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+  enabled: true,
+  birthdayReminders: true,
+  birthdayTiming: "1_week",
+  eventReminders: true,
+  defaultEventTiming: "1_day",
+};
+
 export interface AppSettings {
   theme: "light" | "dark" | "system";
   defaultView: "cards" | "graph";
@@ -27,6 +45,7 @@ export interface AppSettings {
   relationshipColors?: Record<string, string>;
   primaryUserId?: string; // ID of the "Me" person
   familyNames?: Record<string, string>; // Custom family names keyed by group root ID
+  notifications?: NotificationSettings;
 }
 
 // Default family color palette
@@ -47,6 +66,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   sortBy: "firstName",
   sortOrder: "asc",
   familyColors: DEFAULT_FAMILY_COLORS,
+  notifications: DEFAULT_NOTIFICATION_SETTINGS,
 };
 
 export const DATA_STORE_VERSION = "1.0.0";
@@ -57,6 +77,7 @@ export function createEmptyDataStore(): DataStore {
     people: [],
     relationships: [],
     formTemplates: [],
+    events: [],
     settings: DEFAULT_SETTINGS,
   };
 }

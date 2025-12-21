@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, GitBranch, FileText, Settings, Menu, LayoutDashboard } from "lucide-react";
+import { Users, GitBranch, FileText, Settings, Menu, LayoutDashboard, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,6 +17,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "People", href: "/", icon: Users },
   { name: "Graph", href: "/graph", icon: GitBranch },
+  { name: "Events", href: "/events", icon: CalendarDays },
   { name: "Forms", href: "/forms", icon: FileText },
   { name: "Settings", href: "/settings", icon: Settings },
 ];

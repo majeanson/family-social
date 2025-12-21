@@ -48,6 +48,7 @@ export function DataProvider({ children }: DataProviderProps) {
             people: [],
             relationships: [],
             formTemplates: [],
+            events: [],
             settings: {
               theme: "system",
               defaultView: "cards",
@@ -106,6 +107,7 @@ export function DataProvider({ children }: DataProviderProps) {
           people: [],
           relationships: [],
           formTemplates: [],
+          events: [],
           settings: {
             theme: "system",
             defaultView: "cards",
@@ -138,6 +140,7 @@ export function DataProvider({ children }: DataProviderProps) {
       people: [],
       relationships: [],
       formTemplates: [],
+      events: [],
       settings: {
         theme: "system",
         defaultView: "cards",

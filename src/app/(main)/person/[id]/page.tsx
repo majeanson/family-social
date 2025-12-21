@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { RELATIONSHIP_CONFIG } from "@/types";
-import { getBirthdayInfo } from "@/lib/date-utils";
+import { RELATIONSHIP_CONFIG, EVENT_TYPE_CONFIG } from "@/types";
+import { getBirthdayInfo, formatDateDisplay } from "@/lib/date-utils";
 import { EditPersonDialog } from "@/components/people/edit-person-dialog";
 import { FamilyBadge } from "@/components/people/family-badge";
+import { AddEventDialog } from "@/components/events";
 import { useFamilyGroups, usePrimaryUser } from "@/features";
 import {
   ArrowLeft,
@@ -24,6 +25,18 @@ import {
   Edit,
   Network,
   Crown,
+  CalendarDays,
+  Heart,
+  Gem,
+  GraduationCap,
+  Baby,
+  Home,
+  Briefcase,
+  Palmtree,
+  RefreshCw,
+  Plus,
+  FileQuestion,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -34,15 +47,27 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+const EVENT_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  Heart,
+  Gem,
+  GraduationCap,
+  Baby,
+  Home,
+  Briefcase,
+  Palmtree,
+  Calendar,
+};
+
 export default function PersonProfilePage({ params }: PageProps) {
   const { id } = use(params);
-  const { people, relationships, settings } = useDataStore();
+  const { people, relationships, events, settings } = useDataStore();
   const { getFamilyGroup, getFamilyColor } = useFamilyGroups();
   const relationshipColors = settings.relationshipColors;
   const { me, isMe, setAsMe, getMyRelationshipTo } = usePrimaryUser();
   const [showEditDialog, setShowEditDialog] = useState(false);
 
   const person = useMemo(() => people.find((p) => p.id === id), [people, id]);
+  const personEvents = useMemo(() => events.filter((e) => e.personIds.includes(id)), [events, id]);
   const family = person ? getFamilyGroup(person.id) : null;
   const familyColor = person ? getFamilyColor(person.id) : null;
   const isThisPersonMe = person ? isMe(person.id) : false;
@@ -90,6 +115,19 @@ export default function PersonProfilePage({ params }: PageProps) {
     return groups;
   }, [personRelationships]);
 
+  // Check for missing information (must be before early return to satisfy hooks rules)
+  const missingInfo = useMemo(() => {
+    if (!person) return [];
+    const missing: string[] = [];
+    if (!person.birthday) missing.push("birthday");
+    if (!person.email) missing.push("email");
+    if (!person.phone) missing.push("phone");
+    return missing;
+  }, [person]);
+
+  const hasMissingInfo = missingInfo.length > 0;
+  const birthday = person ? getBirthdayInfo(person.birthday) : null;
+
   if (!person) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -104,8 +142,6 @@ export default function PersonProfilePage({ params }: PageProps) {
       </div>
     );
   }
-
-  const birthday = getBirthdayInfo(person.birthday);
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -238,6 +274,24 @@ export default function PersonProfilePage({ params }: PageProps) {
                   </a>
                 )}
               </div>
+
+              {/* Missing Info Prompt */}
+              {hasMissingInfo && (
+                <div className="flex items-start gap-3 p-3 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30">
+                  <FileQuestion className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground">
+                      Missing: {missingInfo.join(", ")}
+                    </p>
+                    <Button variant="link" size="sm" className="h-auto p-0 text-primary" asChild>
+                      <Link href="/forms">
+                        <Send className="h-3 w-3 mr-1" />
+                        Create a form to request this info
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -448,6 +502,71 @@ export default function PersonProfilePage({ params }: PageProps) {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Events */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5" />
+              Events & Milestones
+              {personEvents.length > 0 && (
+                <Badge variant="secondary">{personEvents.length}</Badge>
+              )}
+            </CardTitle>
+            <AddEventDialog
+              preselectedPersonIds={[id]}
+              trigger={
+                <Button variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Event
+                </Button>
+              }
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {personEvents.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              No events associated with {person.firstName} yet.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {personEvents
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .map((event) => {
+                  const config = EVENT_TYPE_CONFIG[event.type];
+                  const Icon = EVENT_ICON_MAP[config.icon] || Calendar;
+                  return (
+                    <div
+                      key={event.id}
+                      className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                    >
+                      <div className={cn("p-2 rounded-full", config.color, "text-white")}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{event.title}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatDateDisplay(event.date)}
+                          {event.type === "custom" && event.customTypeName
+                            ? ` • ${event.customTypeName}`
+                            : ` • ${config.label}`}
+                        </p>
+                      </div>
+                      {event.recurring && (
+                        <Badge variant="secondary" className="gap-1">
+                          <RefreshCw className="h-3 w-3" />
+                          Yearly
+                        </Badge>
+                      )}
+                    </div>
+                  );
+                })}
             </div>
           )}
         </CardContent>

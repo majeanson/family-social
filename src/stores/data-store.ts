@@ -8,6 +8,8 @@ import type {
   PersonFormData,
   Relationship,
   FormTemplate,
+  FamilyEvent,
+  FamilyEventFormData,
   DataStore,
   AppSettings,
 } from "@/types";
@@ -30,6 +32,7 @@ interface DataState {
   people: Person[];
   relationships: Relationship[];
   formTemplates: FormTemplate[];
+  events: FamilyEvent[];
   settings: AppSettings;
 
   // Status
@@ -65,6 +68,13 @@ interface DataState {
   updateFormTemplate: (id: string, updates: Partial<FormTemplate>) => void;
   deleteFormTemplate: (id: string) => void;
 
+  // Actions - Events
+  addEvent: (data: FamilyEventFormData) => string;
+  updateEvent: (id: string, updates: Partial<FamilyEvent>) => void;
+  deleteEvent: (id: string) => void;
+  getEventsForPerson: (personId: string) => FamilyEvent[];
+  getUpcomingEvents: (days?: number) => FamilyEvent[];
+
   // Actions - Data Management
   loadData: (data: DataStore) => void;
   exportData: () => DataStore;
@@ -88,6 +98,7 @@ export const useDataStore = create<DataState>()(
     people: MOCK_PEOPLE,
     relationships: MOCK_RELATIONSHIPS,
     formTemplates: MOCK_FORM_TEMPLATES,
+    events: [],
     settings: DEFAULT_SETTINGS,
     isLoaded: false,
     isSaving: false,
@@ -252,12 +263,79 @@ export const useDataStore = create<DataState>()(
       });
     },
 
+    // Event actions
+    addEvent: (data) => {
+      const id = uuid();
+      const now = new Date().toISOString();
+      set((state) => {
+        state.events.push({
+          ...data,
+          id,
+          createdAt: now,
+          updatedAt: now,
+        });
+        state.hasUnsavedChanges = true;
+      });
+      return id;
+    },
+
+    updateEvent: (id, updates) => {
+      set((state) => {
+        const index = state.events.findIndex((e) => e.id === id);
+        if (index !== -1) {
+          state.events[index] = {
+            ...state.events[index],
+            ...updates,
+            updatedAt: new Date().toISOString(),
+          };
+          state.hasUnsavedChanges = true;
+        }
+      });
+    },
+
+    deleteEvent: (id) => {
+      set((state) => {
+        state.events = state.events.filter((e) => e.id !== id);
+        state.hasUnsavedChanges = true;
+      });
+    },
+
+    getEventsForPerson: (personId) => {
+      return get().events.filter((e) => e.personIds.includes(personId));
+    },
+
+    getUpcomingEvents: (days = 30) => {
+      const events = get().events;
+      const now = new Date();
+      const cutoff = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+      return events
+        .filter((e) => {
+          const eventDate = new Date(e.date);
+          // For recurring events, check next occurrence
+          if (e.recurring) {
+            const thisYearDate = new Date(
+              now.getFullYear(),
+              eventDate.getMonth(),
+              eventDate.getDate()
+            );
+            if (thisYearDate < now) {
+              thisYearDate.setFullYear(now.getFullYear() + 1);
+            }
+            return thisYearDate <= cutoff;
+          }
+          return eventDate >= now && eventDate <= cutoff;
+        })
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    },
+
     // Data Management
     loadData: (data) => {
       set((state) => {
         const people = data.people || [];
         const relationships = data.relationships || [];
         const formTemplates = data.formTemplates || [];
+        const events = data.events || [];
 
         // Check if loaded data has real (non-mock) content
         const hasRealData = people.length > 0 || relationships.length > 0 || formTemplates.length > 0;
@@ -272,18 +350,21 @@ export const useDataStore = create<DataState>()(
             (r) => personIds.has(r.personAId) && personIds.has(r.personBId)
           );
           state.formTemplates = formTemplates;
+          state.events = events;
           state.hasMockData = false;
         } else if (containsMockData) {
           // Data contains mock - keep it
           state.people = people;
           state.relationships = relationships;
           state.formTemplates = formTemplates;
+          state.events = events;
           state.hasMockData = true;
         } else {
           // No data - load mock data
           state.people = MOCK_PEOPLE;
           state.relationships = MOCK_RELATIONSHIPS;
           state.formTemplates = MOCK_FORM_TEMPLATES;
+          state.events = [];
           state.hasMockData = true;
         }
 
@@ -300,6 +381,7 @@ export const useDataStore = create<DataState>()(
         people: state.people,
         relationships: state.relationships,
         formTemplates: state.formTemplates,
+        events: state.events,
         settings: state.settings,
       };
     },
@@ -310,6 +392,7 @@ export const useDataStore = create<DataState>()(
         state.people = empty.people;
         state.relationships = empty.relationships;
         state.formTemplates = empty.formTemplates;
+        state.events = empty.events;
         state.settings = empty.settings;
         state.hasMockData = false;
         state.hasUnsavedChanges = true;
@@ -341,6 +424,7 @@ export const useDataStore = create<DataState>()(
         state.people = MOCK_PEOPLE;
         state.relationships = MOCK_RELATIONSHIPS;
         state.formTemplates = MOCK_FORM_TEMPLATES;
+        state.events = [];
         state.hasMockData = true;
         state.hasUnsavedChanges = false;
       });

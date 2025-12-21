@@ -60,10 +60,14 @@ import {
   Pencil,
   Check,
   Users,
+  Bell,
+  Cake,
+  CalendarDays,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import type { AppSettings, PersonFormData, FamilyColorConfig, RelationshipType, CustomField } from "@/types";
-import { DEFAULT_FAMILY_COLORS, RELATIONSHIP_CONFIG, getGroupedRelationshipTypes } from "@/types";
+import type { AppSettings, PersonFormData, FamilyColorConfig, RelationshipType, CustomField, ReminderTiming } from "@/types";
+import { DEFAULT_FAMILY_COLORS, RELATIONSHIP_CONFIG, getGroupedRelationshipTypes, REMINDER_TIMING_CONFIG, DEFAULT_NOTIFICATION_SETTINGS } from "@/types";
+import { Switch } from "@/components/ui/switch";
 import { v4 as uuid } from "uuid";
 import { GoogleDriveSync } from "@/components/sync/google-drive-sync";
 import { useFamilyGroups, usePrimaryUser } from "@/features";
@@ -205,7 +209,7 @@ export default function SettingsPage() {
     formTemplates,
     lastSaved,
   } = useDataStore();
-  const { familyGroups, renameFamilyGroup, resetFamilyName } = useFamilyGroups();
+  const { familyGroups, renameFamilyGroup } = useFamilyGroups();
   const [editingFamilyId, setEditingFamilyId] = useState<string | null>(null);
   const [editingFamilyName, setEditingFamilyName] = useState("");
   const { me, setAsMe, clearMe } = usePrimaryUser();
@@ -651,6 +655,160 @@ Examples:
                   <SelectItem value="createdAt">Recently Added</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Notification Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notifications & Reminders
+          </CardTitle>
+          <CardDescription>
+            Configure reminders for birthdays and events
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Master Toggle */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Enable Reminders</Label>
+              <p className="text-sm text-muted-foreground">
+                Show reminder alerts when you open the app
+              </p>
+            </div>
+            <Switch
+              checked={settings.notifications?.enabled ?? true}
+              onCheckedChange={(checked) => {
+                updateSettings({
+                  notifications: {
+                    ...(settings.notifications ?? DEFAULT_NOTIFICATION_SETTINGS),
+                    enabled: checked,
+                  },
+                });
+              }}
+            />
+          </div>
+
+          <Separator />
+
+          {/* Birthday Reminders */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Cake className="h-4 w-4 text-pink-500" />
+              <Label className="text-base">Birthday Reminders</Label>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Remind me about birthdays</Label>
+                <p className="text-sm text-muted-foreground">
+                  Get notified about upcoming birthdays
+                </p>
+              </div>
+              <Switch
+                checked={settings.notifications?.birthdayReminders ?? true}
+                disabled={!(settings.notifications?.enabled ?? true)}
+                onCheckedChange={(checked) => {
+                  updateSettings({
+                    notifications: {
+                      ...(settings.notifications ?? DEFAULT_NOTIFICATION_SETTINGS),
+                      birthdayReminders: checked,
+                    },
+                  });
+                }}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Default Birthday Reminder</Label>
+              <Select
+                value={settings.notifications?.birthdayTiming ?? "1_week"}
+                disabled={!(settings.notifications?.enabled ?? true) || !(settings.notifications?.birthdayReminders ?? true)}
+                onValueChange={(value: ReminderTiming) => {
+                  updateSettings({
+                    notifications: {
+                      ...(settings.notifications ?? DEFAULT_NOTIFICATION_SETTINGS),
+                      birthdayTiming: value,
+                    },
+                  });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(REMINDER_TIMING_CONFIG).map(([key, config]) => (
+                    <SelectItem key={key} value={key}>
+                      {config.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Event Reminders */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-purple-500" />
+              <Label className="text-base">Event Reminders</Label>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Remind me about events</Label>
+                <p className="text-sm text-muted-foreground">
+                  Get notified about upcoming family events
+                </p>
+              </div>
+              <Switch
+                checked={settings.notifications?.eventReminders ?? true}
+                disabled={!(settings.notifications?.enabled ?? true)}
+                onCheckedChange={(checked) => {
+                  updateSettings({
+                    notifications: {
+                      ...(settings.notifications ?? DEFAULT_NOTIFICATION_SETTINGS),
+                      eventReminders: checked,
+                    },
+                  });
+                }}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Default Event Reminder</Label>
+              <Select
+                value={settings.notifications?.defaultEventTiming ?? "1_day"}
+                disabled={!(settings.notifications?.enabled ?? true) || !(settings.notifications?.eventReminders ?? true)}
+                onValueChange={(value: ReminderTiming) => {
+                  updateSettings({
+                    notifications: {
+                      ...(settings.notifications ?? DEFAULT_NOTIFICATION_SETTINGS),
+                      defaultEventTiming: value,
+                    },
+                  });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(REMINDER_TIMING_CONFIG).map(([key, config]) => (
+                    <SelectItem key={key} value={key}>
+                      {config.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                This is used when creating new events. You can customize per-event reminders when adding events.
+              </p>
             </div>
           </div>
         </CardContent>

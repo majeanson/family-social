@@ -1,6 +1,9 @@
 "use client";
 
 import { QuickReview } from "@/components/people/quick-review";
+import { BirthdayWidget } from "@/components/dashboard/birthday-widget";
+import { EventsWidget } from "@/components/dashboard/events-widget";
+import { ReminderBanner, ReminderToasts } from "@/components/dashboard/reminder-alerts";
 import { usePrimaryUser } from "@/features/use-primary-user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,6 +18,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Toast notifications for reminders */}
+      <ReminderToasts />
+
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -38,6 +44,9 @@ export default function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      {/* Reminder Banner - shows due reminders prominently */}
+      <ReminderBanner />
 
       {/* Me Card */}
       {hasSetupMe && me ? (
@@ -92,6 +101,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Widgets Row */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <BirthdayWidget />
+        <EventsWidget />
+      </div>
 
       {/* Quick Review Section */}
       <QuickReview />

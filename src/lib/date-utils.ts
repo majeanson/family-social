@@ -86,6 +86,9 @@ export function formatDate(dateString: string | undefined): string | null {
   }
 }
 
+// Alias for backwards compatibility
+export const formatDateDisplay = formatDate;
+
 /**
  * Get relative time string (e.g., "2 days ago", "in 5 days")
  */

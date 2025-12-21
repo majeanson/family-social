@@ -77,12 +77,68 @@ const formTemplateSchema = z.object({
   updatedAt: z.string(),
 });
 
+// Event type enum
+const eventTypeSchema = z.enum([
+  "anniversary",
+  "wedding",
+  "graduation",
+  "birth",
+  "move",
+  "job_change",
+  "retirement",
+  "death",
+  "custom",
+]);
+
+// Reminder timing enum
+const reminderTimingSchema = z.enum([
+  "same_day",
+  "1_day",
+  "3_days",
+  "1_week",
+  "2_weeks",
+]);
+
+// Event reminder schema
+const eventReminderSchema = z.object({
+  timing: reminderTimingSchema,
+  dismissed: z.boolean().optional(),
+  lastDismissedYear: z.number().optional(),
+});
+
+// Family event schema
+const familyEventSchema = z.object({
+  id: z.string(),
+  title: z.string().min(1, "Event title is required"),
+  date: z.string(),
+  type: eventTypeSchema,
+  description: z.string().optional(),
+  personIds: z.array(z.string()),
+  recurring: z.object({
+    frequency: z.enum(["yearly", "monthly"]),
+    endDate: z.string().optional(),
+  }).optional(),
+  customTypeName: z.string().optional(),
+  reminder: eventReminderSchema.optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
 // Family color config schema
 const familyColorConfigSchema = z.object({
   bg: z.string(),
   hex: z.string(),
   light: z.string(),
   border: z.string(),
+});
+
+// Notification settings schema
+const notificationSettingsSchema = z.object({
+  enabled: z.boolean().default(true),
+  birthdayReminders: z.boolean().default(true),
+  birthdayTiming: reminderTimingSchema.default("1_week"),
+  eventReminders: z.boolean().default(true),
+  defaultEventTiming: reminderTimingSchema.default("1_day"),
 });
 
 // App settings schema
@@ -95,6 +151,7 @@ const appSettingsSchema = z.object({
   relationshipColors: z.record(z.string(), z.string()).optional(),
   primaryUserId: z.string().optional(),
   familyNames: z.record(z.string(), z.string()).optional(),
+  notifications: notificationSettingsSchema.optional(),
 });
 
 // Main data store schema
@@ -103,6 +160,7 @@ export const dataStoreSchema = z.object({
   people: z.array(personSchema),
   relationships: z.array(relationshipSchema),
   formTemplates: z.array(formTemplateSchema),
+  events: z.array(familyEventSchema).default([]),
   settings: appSettingsSchema,
   exportedAt: z.string().optional(),
 });
