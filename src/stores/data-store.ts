@@ -150,6 +150,11 @@ export const useDataStore = create<DataState>()(
         state.relationships = state.relationships.filter(
           (r) => r.personAId !== id && r.personBId !== id
         );
+        // Remove person from events' personIds
+        state.events = state.events.map((event) => ({
+          ...event,
+          personIds: event.personIds.filter((pid) => pid !== id),
+        }));
         // Clear primaryUserId if deleting the "Me" person
         if (state.settings.primaryUserId === id) {
           state.settings.primaryUserId = undefined;
@@ -345,12 +350,16 @@ export const useDataStore = create<DataState>()(
           // User has real data - use it and don't show mock
           state.people = people;
           // Clean up orphaned relationships (pointing to deleted people)
-          const personIds = new Set(people.map((p) => p.id));
+          const personIdSet = new Set(people.map((p) => p.id));
           state.relationships = relationships.filter(
-            (r) => personIds.has(r.personAId) && personIds.has(r.personBId)
+            (r) => personIdSet.has(r.personAId) && personIdSet.has(r.personBId)
           );
           state.formTemplates = formTemplates;
-          state.events = events;
+          // Clean up orphaned personIds in events
+          state.events = events.map((event) => ({
+            ...event,
+            personIds: event.personIds.filter((pid) => personIdSet.has(pid)),
+          }));
           state.hasMockData = false;
         } else if (containsMockData) {
           // Data contains mock - keep it

@@ -52,7 +52,7 @@ export function AddEventDialog({
     date: event?.date || "",
     type: event?.type || "custom",
     description: event?.description || "",
-    personIds: event?.personIds || preselectedPersonIds,
+    personIds: event?.personIds ?? preselectedPersonIds ?? [],
     recurring: event?.recurring,
     customTypeName: event?.customTypeName || "",
     reminder: event?.reminder,
@@ -280,6 +280,7 @@ export function AddEventDialog({
                     >
                       <Checkbox
                         checked={formData.personIds.includes(person.id)}
+                        onClick={(e) => e.stopPropagation()}
                         onCheckedChange={() => togglePerson(person.id)}
                       />
                       <Avatar className="h-8 w-8">
