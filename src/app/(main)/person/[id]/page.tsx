@@ -7,6 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { RELATIONSHIP_CONFIG, EVENT_TYPE_CONFIG } from "@/types";
 import { getBirthdayInfo, formatDateDisplay } from "@/lib/date-utils";
 import { EditPersonDialog } from "@/components/people/edit-person-dialog";
@@ -39,6 +56,9 @@ import {
   FileQuestion,
   Send,
   Share2,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -62,7 +82,7 @@ const EVENT_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>
 
 export default function PersonProfilePage({ params }: PageProps) {
   const { id } = use(params);
-  const { people, relationships, events, settings } = useDataStore();
+  const { people, relationships, events, settings, deleteEvent } = useDataStore();
   const { getFamilyGroup, getFamilyColor } = useFamilyGroups();
   const relationshipColors = settings.relationshipColors;
   const { me, isMe, setAsMe, getMyRelationshipTo } = usePrimaryUser();
@@ -555,7 +575,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                   return (
                     <div
                       key={event.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                      className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group"
                     >
                       <div className={cn("p-2 rounded-full", config.color, "text-white")}>
                         <Icon className="h-4 w-4" />
@@ -575,6 +595,60 @@ export default function PersonProfilePage({ params }: PageProps) {
                           Yearly
                         </Badge>
                       )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Event actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <AddEventDialog
+                            event={event}
+                            trigger={
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                            }
+                          />
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <DropdownMenuItem
+                                onSelect={(e) => e.preventDefault()}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Event</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete &ldquo;{event.title}&rdquo;? This
+                                  action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => {
+                                    deleteEvent(event.id);
+                                    toast.success("Event deleted");
+                                  }}
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   );
                 })}
