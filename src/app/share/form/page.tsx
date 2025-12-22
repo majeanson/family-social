@@ -108,9 +108,26 @@ function ShareFormContent() {
     }
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(shareLink);
-    toast.success("Link copied!");
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      toast.success("Link copied!");
+    } catch {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement("textarea");
+      textArea.value = shareLink;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand("copy");
+        toast.success("Link copied!");
+      } catch {
+        toast.error("Failed to copy link");
+      }
+      document.body.removeChild(textArea);
+    }
   };
 
   const handleShare = async () => {
@@ -130,10 +147,11 @@ function ShareFormContent() {
   const getExpiryLabel = () => {
     const date = new Date(expiresAt);
     const now = new Date();
-    const hours = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60));
+    const hours = Math.round((date.getTime() - now.getTime()) / (1000 * 60 * 60));
     if (hours <= 1) return "1 hour";
-    if (hours <= 24) return "24 hours";
-    return `${Math.ceil(hours / 24)} days`;
+    if (hours < 24) return `${hours} hours`;
+    if (hours < 48) return "1 day";
+    return `${Math.round(hours / 24)} days`;
   };
 
   // Invalid template

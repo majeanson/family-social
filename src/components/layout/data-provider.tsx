@@ -7,6 +7,7 @@ import {
   supportsFileSystemAccess,
   FileSystemStorageAdapter,
 } from "@/services/storage";
+import { createEmptyDataStore } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -43,19 +44,7 @@ export function DataProvider({ children }: DataProviderProps) {
           setShowSetup(true);
         } else {
           // IndexedDB fallback - just start fresh
-          loadData({
-            version: "1.0.0",
-            people: [],
-            relationships: [],
-            formTemplates: [],
-            events: [],
-            settings: {
-              theme: "system",
-              defaultView: "cards",
-              sortBy: "firstName",
-              sortOrder: "asc",
-            },
-          });
+          loadData(createEmptyDataStore());
         }
       }
       setIsInitializing(false);
@@ -102,19 +91,7 @@ export function DataProvider({ children }: DataProviderProps) {
       const adapter = new FileSystemStorageAdapter();
       const handle = await adapter.requestFileAccess();
       if (handle) {
-        loadData({
-          version: "1.0.0",
-          people: [],
-          relationships: [],
-          formTemplates: [],
-          events: [],
-          settings: {
-            theme: "system",
-            defaultView: "cards",
-            sortBy: "firstName",
-            sortOrder: "asc",
-          },
-        });
+        loadData(createEmptyDataStore());
         setShowSetup(false);
       }
     }
@@ -135,19 +112,7 @@ export function DataProvider({ children }: DataProviderProps) {
   }, [loadData]);
 
   const handleUseLocal = useCallback(() => {
-    loadData({
-      version: "1.0.0",
-      people: [],
-      relationships: [],
-      formTemplates: [],
-      events: [],
-      settings: {
-        theme: "system",
-        defaultView: "cards",
-        sortBy: "firstName",
-        sortOrder: "asc",
-      },
-    });
+    loadData(createEmptyDataStore());
     setShowSetup(false);
   }, [loadData]);
 

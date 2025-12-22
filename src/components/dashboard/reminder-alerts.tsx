@@ -97,7 +97,7 @@ export const ReminderBanner = memo(function ReminderBanner() {
         <Card className="border-amber-200 dark:border-amber-800 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
           <CardContent className="py-4">
             <div className="flex items-center gap-2 mb-3">
-              <PartyPopper className="h-5 w-5 text-amber-600" />
+              <PartyPopper className="h-5 w-5 text-amber-600" aria-hidden="true" />
               <h3 className="font-semibold text-amber-900 dark:text-amber-100">
                 Today!
               </h3>
@@ -124,7 +124,7 @@ export const ReminderBanner = memo(function ReminderBanner() {
         <Card>
           <CardContent className="py-4">
             <div className="flex items-center gap-2 mb-3">
-              <Bell className="h-5 w-5 text-blue-500" />
+              <Bell className="h-5 w-5 text-blue-500" aria-hidden="true" />
               <h3 className="font-semibold">Upcoming Reminders</h3>
               <Badge variant="secondary">{upcomingReminders.length}</Badge>
             </div>
@@ -173,7 +173,7 @@ function ReminderItem({ reminder, onDismiss, variant }: ReminderItemProps) {
           : "hover:bg-muted/50"
       )}
     >
-      <Icon className={cn("h-5 w-5 flex-shrink-0", iconColor)} />
+      <Icon className={cn("h-5 w-5 flex-shrink-0", iconColor)} aria-hidden="true" />
       <div className="flex-1 min-w-0">
         <p className="font-medium truncate">{reminder.title}</p>
         <p className="text-sm text-muted-foreground">
@@ -191,7 +191,7 @@ function ReminderItem({ reminder, onDismiss, variant }: ReminderItemProps) {
         <Button variant="ghost" size="sm" asChild className="h-8 px-2">
           <Link href={href}>
             <span className="sr-only">View</span>
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </Button>
         <Button
@@ -201,7 +201,7 @@ function ReminderItem({ reminder, onDismiss, variant }: ReminderItemProps) {
           onClick={onDismiss}
           aria-label="Dismiss reminder"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
     </div>

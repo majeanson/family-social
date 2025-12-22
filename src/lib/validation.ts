@@ -17,7 +17,7 @@ const personSchema = z.object({
   photo: z.string().optional(),
   birthday: z.string().optional(),
   notes: z.string().optional(),
-  email: z.string().optional(),
+  email: z.string().email("Invalid email format").optional().or(z.literal("")),
   phone: z.string().optional(),
   customFields: z.array(customFieldSchema).default([]),
   tags: z.array(z.string()).default([]),

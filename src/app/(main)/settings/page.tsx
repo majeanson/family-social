@@ -65,8 +65,8 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import type { AppSettings, PersonFormData, FamilyColorConfig, RelationshipType, CustomField, ReminderTiming } from "@/types";
-import { DEFAULT_FAMILY_COLORS, RELATIONSHIP_CONFIG, getGroupedRelationshipTypes, REMINDER_TIMING_CONFIG, DEFAULT_NOTIFICATION_SETTINGS } from "@/types";
+import type { AppSettings, PersonFormData, FamilyColorConfig, RelationshipType, CustomField, ReminderTiming, ThemePreset, CustomTheme, ThemeColors } from "@/types";
+import { DEFAULT_FAMILY_COLORS, RELATIONSHIP_CONFIG, getGroupedRelationshipTypes, REMINDER_TIMING_CONFIG, DEFAULT_NOTIFICATION_SETTINGS, THEME_PRESETS } from "@/types";
 import { Switch } from "@/components/ui/switch";
 import { v4 as uuid } from "uuid";
 import { GoogleDriveSync } from "@/components/sync/google-drive-sync";
@@ -657,6 +657,225 @@ Examples:
               </Select>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Theme Customization */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5" />
+            Theme Customization
+          </CardTitle>
+          <CardDescription>
+            Choose a color theme or create your own
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Preset Selector */}
+          <div className="space-y-3">
+            <Label>Color Theme</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {(Object.keys(THEME_PRESETS) as ThemePreset[]).map((preset) => {
+                const colors = THEME_PRESETS[preset];
+                const isSelected = (settings.themePreset || "default") === preset;
+                const presetLabel = preset.charAt(0).toUpperCase() + preset.slice(1);
+
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => updateSettings({ themePreset: preset })}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-colors ${
+                      isSelected
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    {/* Color preview */}
+                    <div className="flex gap-1">
+                      {colors.light.primary && (
+                        <div
+                          className="w-4 h-4 rounded-full border"
+                          style={{ backgroundColor: colors.light.primary }}
+                        />
+                      )}
+                      {colors.light.accent && (
+                        <div
+                          className="w-4 h-4 rounded-full border"
+                          style={{ backgroundColor: colors.light.accent }}
+                        />
+                      )}
+                      {colors.light.card && (
+                        <div
+                          className="w-4 h-4 rounded-full border"
+                          style={{ backgroundColor: colors.light.card }}
+                        />
+                      )}
+                      {!colors.light.primary && !colors.light.accent && (
+                        <div className="w-4 h-4 rounded-full bg-muted border" />
+                      )}
+                    </div>
+                    <span className="text-sm font-medium">{presetLabel}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Custom Theme Editor */}
+          {settings.themePreset === "custom" && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base">Custom Colors</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      updateSettings({
+                        customTheme: { light: {}, dark: {} },
+                      });
+                      toast.success("Custom colors reset");
+                    }}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Reset
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Customize colors for light and dark modes. Leave empty to use defaults.
+                </p>
+
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Light Mode Column */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Sun className="h-4 w-4" />
+                      <Label className="font-medium">Light Mode</Label>
+                    </div>
+                    <div className="space-y-3">
+                      {(["primary", "secondary", "accent", "card", "background", "muted"] as (keyof ThemeColors)[]).map((colorKey) => {
+                        const labels: Record<keyof ThemeColors, string> = {
+                          primary: "Primary (Buttons)",
+                          secondary: "Secondary (Subtle)",
+                          accent: "Accent (Highlights)",
+                          card: "Card Background",
+                          background: "Page Background",
+                          muted: "Muted Background",
+                        };
+                        const currentValue = settings.customTheme?.light?.[colorKey] || "";
+
+                        return (
+                          <div key={colorKey} className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">
+                              {labels[colorKey]}
+                            </Label>
+                            <div className="flex gap-2">
+                              <Input
+                                type="color"
+                                value={currentValue || "#808080"}
+                                onChange={(e) => {
+                                  const newCustomTheme: CustomTheme = {
+                                    light: {
+                                      ...(settings.customTheme?.light || {}),
+                                      [colorKey]: e.target.value,
+                                    },
+                                    dark: settings.customTheme?.dark || {},
+                                  };
+                                  updateSettings({ customTheme: newCustomTheme });
+                                }}
+                                className="w-12 h-8 p-0.5 cursor-pointer"
+                              />
+                              <Input
+                                type="text"
+                                value={currentValue}
+                                onChange={(e) => {
+                                  const newCustomTheme: CustomTheme = {
+                                    light: {
+                                      ...(settings.customTheme?.light || {}),
+                                      [colorKey]: e.target.value,
+                                    },
+                                    dark: settings.customTheme?.dark || {},
+                                  };
+                                  updateSettings({ customTheme: newCustomTheme });
+                                }}
+                                placeholder="#hex"
+                                className="font-mono text-xs h-8"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Dark Mode Column */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Moon className="h-4 w-4" />
+                      <Label className="font-medium">Dark Mode</Label>
+                    </div>
+                    <div className="space-y-3">
+                      {(["primary", "secondary", "accent", "card", "background", "muted"] as (keyof ThemeColors)[]).map((colorKey) => {
+                        const labels: Record<keyof ThemeColors, string> = {
+                          primary: "Primary (Buttons)",
+                          secondary: "Secondary (Subtle)",
+                          accent: "Accent (Highlights)",
+                          card: "Card Background",
+                          background: "Page Background",
+                          muted: "Muted Background",
+                        };
+                        const currentValue = settings.customTheme?.dark?.[colorKey] || "";
+
+                        return (
+                          <div key={colorKey} className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">
+                              {labels[colorKey]}
+                            </Label>
+                            <div className="flex gap-2">
+                              <Input
+                                type="color"
+                                value={currentValue || "#808080"}
+                                onChange={(e) => {
+                                  const newCustomTheme: CustomTheme = {
+                                    light: settings.customTheme?.light || {},
+                                    dark: {
+                                      ...(settings.customTheme?.dark || {}),
+                                      [colorKey]: e.target.value,
+                                    },
+                                  };
+                                  updateSettings({ customTheme: newCustomTheme });
+                                }}
+                                className="w-12 h-8 p-0.5 cursor-pointer"
+                              />
+                              <Input
+                                type="text"
+                                value={currentValue}
+                                onChange={(e) => {
+                                  const newCustomTheme: CustomTheme = {
+                                    light: settings.customTheme?.light || {},
+                                    dark: {
+                                      ...(settings.customTheme?.dark || {}),
+                                      [colorKey]: e.target.value,
+                                    },
+                                  };
+                                  updateSettings({ customTheme: newCustomTheme });
+                                }}
+                                placeholder="#hex"
+                                className="font-mono text-xs h-8"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

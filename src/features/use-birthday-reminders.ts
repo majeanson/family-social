@@ -40,10 +40,3 @@ export function useBirthdayReminders(days = 30, limit = 10): UpcomingBirthday[] 
   }, [people, days, limit]);
 }
 
-/**
- * Get count of birthdays in the next N days
- */
-export function useBirthdayCount(days = 7): number {
-  const upcoming = useBirthdayReminders(days, 100);
-  return upcoming.length;
-}

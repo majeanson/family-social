@@ -145,6 +145,20 @@ export function isValidEmail(email: string): boolean {
 }
 
 /**
+ * Validate phone number format
+ * Accepts various formats: +1234567890, (123) 456-7890, 123-456-7890, etc.
+ */
+export function isValidPhone(phone: string): boolean {
+  if (!phone) return true; // Optional field
+  // Remove all whitespace and common separators for length check
+  const digits = phone.replace(/[\s\-\(\)\.\+]/g, "");
+  // Must have between 7 and 15 digits (international range)
+  if (digits.length < 7 || digits.length > 15) return false;
+  // Must contain only digits after stripping separators
+  return /^\d+$/.test(digits);
+}
+
+/**
  * Validate birthday (not in the future, reasonable range)
  */
 export function isValidBirthday(birthday: string): { valid: boolean; error?: string } {

@@ -7,12 +7,14 @@ const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
 
-// Generate a short, URL-safe code
-function generateCode(length = 8): string {
+// Generate a cryptographically secure, URL-safe code
+function generateCode(length = 10): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  const randomValues = new Uint32Array(length);
+  crypto.getRandomValues(randomValues);
   let code = "";
   for (let i = 0; i < length; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+    code += chars.charAt(randomValues[i] % chars.length);
   }
   return code;
 }

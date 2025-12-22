@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { useDataStore } from "@/stores/data-store";
 import { useBirthdayReminders } from "./use-birthday-reminders";
+import { getNextOccurrence } from "@/lib/date-utils";
 import type { FamilyEvent, Person, ReminderTiming } from "@/types";
 import { REMINDER_TIMING_CONFIG, DEFAULT_NOTIFICATION_SETTINGS } from "@/types";
 
@@ -18,37 +19,6 @@ export interface DueReminder {
   event?: FamilyEvent;
   person?: Person;
   timing: ReminderTiming;
-}
-
-/**
- * Calculate the next occurrence of a date (for recurring events/birthdays)
- */
-function getNextOccurrence(dateStr: string): { date: Date; daysUntil: number } {
-  const eventDate = new Date(dateStr);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  // Try this year's occurrence
-  let nextDate = new Date(
-    now.getFullYear(),
-    eventDate.getMonth(),
-    eventDate.getDate()
-  );
-
-  // If it's passed, use next year
-  if (nextDate < today) {
-    nextDate = new Date(
-      now.getFullYear() + 1,
-      eventDate.getMonth(),
-      eventDate.getDate()
-    );
-  }
-
-  const daysUntil = Math.floor(
-    (nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  return { date: nextDate, daysUntil };
 }
 
 /**
@@ -169,16 +139,19 @@ export function useEventReminders(): DueReminder[] {
 export function useDismissReminder() {
   const { updateEvent } = useDataStore();
 
-  return (reminder: DueReminder) => {
-    if (reminder.type === "event" && reminder.event) {
-      updateEvent(reminder.event.id, {
-        reminder: {
-          ...reminder.event.reminder!,
-          dismissed: true,
-          lastDismissedYear: new Date().getFullYear(),
-        },
-      });
-    }
-    // For birthdays, we don't persist dismissal (they reset each year)
-  };
+  return useCallback(
+    (reminder: DueReminder) => {
+      if (reminder.type === "event" && reminder.event) {
+        updateEvent(reminder.event.id, {
+          reminder: {
+            ...reminder.event.reminder!,
+            dismissed: true,
+            lastDismissedYear: new Date().getFullYear(),
+          },
+        });
+      }
+      // For birthdays, we don't persist dismissal (they reset each year)
+    },
+    [updateEvent]
+  );
 }

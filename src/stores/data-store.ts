@@ -15,6 +15,7 @@ import type {
 } from "@/types";
 import {
   DEFAULT_SETTINGS,
+  DEFAULT_NOTIFICATION_SETTINGS,
   DATA_STORE_VERSION,
   createEmptyDataStore,
   RELATIONSHIP_INVERSES,
@@ -150,11 +151,13 @@ export const useDataStore = create<DataState>()(
         state.relationships = state.relationships.filter(
           (r) => r.personAId !== id && r.personBId !== id
         );
-        // Remove person from events' personIds
-        state.events = state.events.map((event) => ({
-          ...event,
-          personIds: event.personIds.filter((pid) => pid !== id),
-        }));
+        // Remove person from events' personIds, then remove events with no people
+        state.events = state.events
+          .map((event) => ({
+            ...event,
+            personIds: event.personIds.filter((pid) => pid !== id),
+          }))
+          .filter((event) => event.personIds.length > 0);
         // Clear primaryUserId if deleting the "Me" person
         if (state.settings.primaryUserId === id) {
           state.settings.primaryUserId = undefined;
@@ -355,11 +358,13 @@ export const useDataStore = create<DataState>()(
             (r) => personIdSet.has(r.personAId) && personIdSet.has(r.personBId)
           );
           state.formTemplates = formTemplates;
-          // Clean up orphaned personIds in events
-          state.events = events.map((event) => ({
-            ...event,
-            personIds: event.personIds.filter((pid) => personIdSet.has(pid)),
-          }));
+          // Clean up orphaned personIds in events, then remove events with no people
+          state.events = events
+            .map((event) => ({
+              ...event,
+              personIds: event.personIds.filter((pid) => personIdSet.has(pid)),
+            }))
+            .filter((event) => event.personIds.length > 0);
           state.hasMockData = false;
         } else if (containsMockData) {
           // Data contains mock - keep it
@@ -377,7 +382,20 @@ export const useDataStore = create<DataState>()(
           state.hasMockData = true;
         }
 
-        state.settings = { ...DEFAULT_SETTINGS, ...data.settings };
+        // Deep merge settings to preserve nested defaults
+        const loadedNotifications = data.settings?.notifications;
+        state.settings = {
+          ...DEFAULT_SETTINGS,
+          ...data.settings,
+          notifications: {
+            enabled: loadedNotifications?.enabled ?? DEFAULT_NOTIFICATION_SETTINGS.enabled,
+            birthdayReminders: loadedNotifications?.birthdayReminders ?? DEFAULT_NOTIFICATION_SETTINGS.birthdayReminders,
+            birthdayTiming: loadedNotifications?.birthdayTiming ?? DEFAULT_NOTIFICATION_SETTINGS.birthdayTiming,
+            eventReminders: loadedNotifications?.eventReminders ?? DEFAULT_NOTIFICATION_SETTINGS.eventReminders,
+            defaultEventTiming: loadedNotifications?.defaultEventTiming ?? DEFAULT_NOTIFICATION_SETTINGS.defaultEventTiming,
+          },
+          familyColors: data.settings?.familyColors ?? DEFAULT_SETTINGS.familyColors,
+        };
         state.isLoaded = true;
         state.hasUnsavedChanges = false;
       });

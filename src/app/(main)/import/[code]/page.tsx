@@ -208,7 +208,7 @@ export default function ImportCodePage() {
         {existingPerson && (
           <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-4">
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              <strong>Note:</strong> {personData.firstName} {personData.lastName} already exists.
+              <strong>Note:</strong> {personData.firstName}{personData.lastName ? ` ${personData.lastName}` : ""} already exists.
             </p>
             <Button
               variant="outline"

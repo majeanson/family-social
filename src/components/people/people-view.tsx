@@ -133,47 +133,47 @@ export function PeopleView() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">People</h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {people.length} {people.length === 1 ? "person" : "people"} in your network
           </p>
         </div>
-        <Button onClick={() => setShowQuickAdd(true)} size="lg">
-          <Plus className="mr-2 h-4 w-4" />
+        <Button onClick={() => setShowQuickAdd(true)} className="w-full sm:w-auto">
+          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
           Add Person
         </Button>
       </div>
 
       {/* View Mode Tabs */}
       <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-        <TabsList>
-          <TabsTrigger value="cards" className="gap-2">
-            <LayoutGrid className="h-4 w-4" />
+        <TabsList aria-label="View mode">
+          <TabsTrigger value="cards" className="gap-1.5">
+            <LayoutGrid className="h-4 w-4" aria-hidden="true" />
             Cards
           </TabsTrigger>
-          <TabsTrigger value="quick" className="gap-2">
-            <Sparkles className="h-4 w-4" />
-            Quick Review
+          <TabsTrigger value="quick" className="gap-1.5">
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
+            Review
           </TabsTrigger>
         </TabsList>
 
         {/* Cards View */}
         <TabsContent value="cards" className="space-y-6 mt-6">
           {/* Filters */}
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             {/* Search */}
-            <div className="relative flex-1">
+            <div className="relative flex-1 sm:max-w-sm">
               <label htmlFor="search-people" className="sr-only">Search by name or tag</label>
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" aria-hidden="true" />
               <Input
                 id="search-people"
-                placeholder="Search by name or tag..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {/* Family Filter */}
               {familyGroups.length > 0 && (
                 <div className="flex items-center gap-1">
@@ -181,9 +181,9 @@ export function PeopleView() {
                     value={selectedFamilyId || "all"}
                     onValueChange={(v) => setSelectedFamilyId(v === "all" ? null : v)}
                   >
-                    <SelectTrigger className="w-[160px]">
-                      <Network className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <SelectValue placeholder="All Families" />
+                    <SelectTrigger className="w-[140px] sm:w-[160px]" aria-label="Filter by family">
+                      <Network className="h-4 w-4 mr-2 text-muted-foreground shrink-0" aria-hidden="true" />
+                      <SelectValue placeholder="Family" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Families</SelectItem>
@@ -192,7 +192,7 @@ export function PeopleView() {
                         return (
                           <SelectItem key={group.id} value={group.id}>
                             <div className="flex items-center gap-2">
-                              <div className={`w-3 h-3 rounded-full ${color.bg}`} />
+                              <div className={`w-3 h-3 rounded-full ${color.bg}`} aria-hidden="true" />
                               <span>{group.name}</span>
                             </div>
                           </SelectItem>
@@ -218,11 +218,11 @@ export function PeopleView() {
               {allTags.length > 0 && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2">
-                      <Filter className="h-4 w-4" />
-                      Tags
+                    <Button variant="outline" size="sm" className="gap-1.5">
+                      <Filter className="h-4 w-4" aria-hidden="true" />
+                      <span className="hidden sm:inline">Tags</span>
                       {selectedTags.length > 0 && (
-                        <Badge variant="secondary" className="ml-1 px-1.5">
+                        <Badge variant="secondary" className="px-1.5 h-5 min-w-5">
                           {selectedTags.length}
                         </Badge>
                       )}
@@ -247,9 +247,9 @@ export function PeopleView() {
               {/* Sort */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="gap-2">
-                    <SortAsc className="h-4 w-4" />
-                    Sort
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    <SortAsc className="h-4 w-4" aria-hidden="true" />
+                    <span className="hidden sm:inline">Sort</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">

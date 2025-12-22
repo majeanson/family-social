@@ -55,6 +55,19 @@ function formatAge(birthDate: Date, today: Date): { age: number; ageDisplay: str
 }
 
 /**
+ * Create a date for a specific year with the same month/day, handling leap year edge case.
+ * If date doesn't exist (e.g., Feb 29 in non-leap year), uses Feb 28.
+ */
+function createDateInYear(year: number, month: number, day: number): Date {
+  const date = new Date(year, month, day);
+  // If the month rolled over (e.g., Feb 29 -> Mar 1), use last day of intended month
+  if (date.getMonth() !== month) {
+    return new Date(year, month + 1, 0); // Last day of the intended month
+  }
+  return date;
+}
+
+/**
  * Calculate comprehensive birthday information
  */
 export function getBirthdayInfo(birthday: string | undefined): BirthdayInfo | null {
@@ -71,16 +84,16 @@ export function getBirthdayInfo(birthday: string | undefined): BirthdayInfo | nu
     // Calculate age with proper formatting for infants
     const { age, ageDisplay } = formatAge(date, today);
 
-    // Calculate days until next birthday
-    let nextBirthday = new Date(thisYear, date.getMonth(), date.getDate());
+    // Calculate days until next birthday (handles leap year - Feb 29 shows as Feb 28)
+    let nextBirthday = createDateInYear(thisYear, date.getMonth(), date.getDate());
     nextBirthday.setHours(0, 0, 0, 0);
 
     if (nextBirthday < today) {
-      nextBirthday = new Date(thisYear + 1, date.getMonth(), date.getDate());
+      nextBirthday = createDateInYear(thisYear + 1, date.getMonth(), date.getDate());
     }
 
     const diffTime = nextBirthday.getTime() - today.getTime();
-    const daysUntil = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const daysUntil = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     const isToday = daysUntil === 0 || (today.getMonth() === date.getMonth() && today.getDate() === date.getDate());
 
     return {
@@ -126,6 +139,48 @@ export function formatDate(dateString: string | undefined): string | null {
 
 // Alias for backwards compatibility
 export const formatDateDisplay = formatDate;
+
+/**
+ * Calculate the next occurrence of an annual date (for recurring events/birthdays)
+ * Used for events that occur on the same month/day each year
+ * Handles leap year edge case (Feb 29 birthdays show as Feb 28 in non-leap years)
+ */
+export function getNextOccurrence(dateStr: string): { date: Date; year: number; daysUntil: number } {
+  const eventDate = new Date(dateStr + "T00:00:00");
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Try this year's occurrence (handles leap year)
+  let nextDate = createDateInYear(
+    now.getFullYear(),
+    eventDate.getMonth(),
+    eventDate.getDate()
+  );
+
+  // If it's passed, use next year
+  if (nextDate < today) {
+    nextDate = createDateInYear(
+      now.getFullYear() + 1,
+      eventDate.getMonth(),
+      eventDate.getDate()
+    );
+  }
+
+  const daysUntil = Math.floor(
+    (nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  return { date: nextDate, year: nextDate.getFullYear(), daysUntil };
+}
+
+/**
+ * Get ordinal suffix for a number (e.g., 1st, 2nd, 3rd, 4th)
+ */
+export function getOrdinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
 
 /**
  * Get relative time string (e.g., "2 days ago", "in 5 days")

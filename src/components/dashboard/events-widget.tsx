@@ -18,8 +18,10 @@ import {
   CalendarDays,
   ArrowRight,
   RefreshCw,
+  Flower2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getNextOccurrence, getOrdinal } from "@/lib/date-utils";
 import { EVENT_TYPE_CONFIG } from "@/types";
 import { AddEventDialog } from "@/components/events/add-event-dialog";
 
@@ -32,41 +34,8 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Briefcase,
   Palmtree,
   Calendar,
+  Flower2,
 };
-
-function getOrdinal(n: number): string {
-  const s = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-}
-
-function getNextOccurrence(dateStr: string): { date: Date; daysUntil: number } {
-  const eventDate = new Date(dateStr);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  // Try this year's occurrence
-  let nextDate = new Date(
-    now.getFullYear(),
-    eventDate.getMonth(),
-    eventDate.getDate()
-  );
-
-  // If it's passed, use next year
-  if (nextDate < today) {
-    nextDate = new Date(
-      now.getFullYear() + 1,
-      eventDate.getMonth(),
-      eventDate.getDate()
-    );
-  }
-
-  const daysUntil = Math.floor(
-    (nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  return { date: nextDate, daysUntil };
-}
 
 export const EventsWidget = memo(function EventsWidget() {
   const { events } = useDataStore();
@@ -110,7 +79,7 @@ export const EventsWidget = memo(function EventsWidget() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <CalendarDays className="h-5 w-5 text-purple-500" />
+            <CalendarDays className="h-5 w-5 text-purple-500" aria-hidden="true" />
             Upcoming Events
           </CardTitle>
         </CardHeader>
@@ -136,13 +105,13 @@ export const EventsWidget = memo(function EventsWidget() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-lg">
-              <CalendarDays className="h-5 w-5 text-purple-500" />
+              <CalendarDays className="h-5 w-5 text-purple-500" aria-hidden="true" />
               Upcoming Events
             </CardTitle>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/events">
                 View All
-                <ArrowRight className="h-4 w-4 ml-1" />
+                <ArrowRight className="h-4 w-4 ml-1" aria-hidden="true" />
               </Link>
             </Button>
           </div>
@@ -161,21 +130,21 @@ export const EventsWidget = memo(function EventsWidget() {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <CalendarDays className="h-5 w-5 text-purple-500" />
+            <CalendarDays className="h-5 w-5 text-purple-500" aria-hidden="true" />
             Upcoming Events
           </CardTitle>
           <Button variant="ghost" size="sm" asChild>
             <Link href="/events">
               View All
-              <ArrowRight className="h-4 w-4 ml-1" />
+              <ArrowRight className="h-4 w-4 ml-1" aria-hidden="true" />
             </Link>
           </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {upcomingEvents.map(({ event, nextDate, daysUntil }) => {
-          const config = EVENT_TYPE_CONFIG[event.type];
-          const Icon = ICON_MAP[config.icon] || Calendar;
+          const config = EVENT_TYPE_CONFIG[event.type] ?? EVENT_TYPE_CONFIG.custom;
+          const Icon = ICON_MAP[config.icon] ?? Calendar;
 
           // Calculate anniversary year for recurring events
           const eventYear = new Date(event.date).getFullYear();
@@ -189,7 +158,7 @@ export const EventsWidget = memo(function EventsWidget() {
               className="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-muted/50 transition-colors"
             >
               <div className={cn("p-2 rounded-full", config.color, "text-white")}>
-                <Icon className="h-4 w-4" />
+                <Icon className="h-4 w-4" aria-hidden="true" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{event.title}</p>
@@ -203,7 +172,7 @@ export const EventsWidget = memo(function EventsWidget() {
               </div>
               <div className="flex items-center gap-2">
                 {event.recurring && (
-                  <RefreshCw className="h-3 w-3 text-muted-foreground" />
+                  <RefreshCw className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
                 )}
                 {daysUntil === 0 ? (
                   <Badge className="bg-purple-500 hover:bg-purple-600">Today</Badge>

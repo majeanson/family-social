@@ -21,7 +21,7 @@ export const EVENT_TYPE_CONFIG: Record<EventType, { label: string; icon: string;
   move: { label: "Move", icon: "Home", color: "bg-orange-500" },
   job_change: { label: "Job Change", icon: "Briefcase", color: "bg-cyan-500" },
   retirement: { label: "Retirement", icon: "Palmtree", color: "bg-yellow-500" },
-  death: { label: "Passing", icon: "Heart", color: "bg-gray-500" },
+  death: { label: "Passing", icon: "Flower2", color: "bg-gray-500" },
   custom: { label: "Custom", icon: "Calendar", color: "bg-slate-500" },
 };
 

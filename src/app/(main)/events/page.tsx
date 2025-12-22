@@ -46,44 +46,47 @@ export default function EventsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1 sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
           <Input
             placeholder="Search events..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
+            aria-label="Search events"
           />
         </div>
 
-        <Select
-          value={typeFilter}
-          onValueChange={(value) => setTypeFilter(value as EventType | "all")}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            {Object.entries(EVENT_TYPE_CONFIG).map(([key, config]) => (
-              <SelectItem key={key} value={key}>
-                {config.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2 items-center">
+          <Select
+            value={typeFilter}
+            onValueChange={(value) => setTypeFilter(value as EventType | "all")}
+          >
+            <SelectTrigger className="w-full sm:w-[180px]" aria-label="Filter by event type">
+              <SelectValue placeholder="Filter by type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              {Object.entries(EVENT_TYPE_CONFIG).map(([key, config]) => (
+                <SelectItem key={key} value={key}>
+                  {config.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        <Tabs value={view} onValueChange={(v) => setView(v as "timeline" | "grid")}>
-          <TabsList>
-            <TabsTrigger value="timeline">
-              <List className="h-4 w-4" />
-            </TabsTrigger>
-            <TabsTrigger value="grid">
-              <LayoutGrid className="h-4 w-4" />
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+          <Tabs value={view} onValueChange={(v) => setView(v as "timeline" | "grid")}>
+            <TabsList aria-label="View mode">
+              <TabsTrigger value="timeline" aria-label="Timeline view">
+                <List className="h-4 w-4" aria-hidden="true" />
+              </TabsTrigger>
+              <TabsTrigger value="grid" aria-label="Grid view">
+                <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       {/* Stats */}

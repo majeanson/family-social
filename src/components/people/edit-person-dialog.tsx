@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { X, Plus, Trash2 } from "lucide-react";
-import { isValidEmail, isValidBirthday } from "@/lib/utils";
+import { isValidEmail, isValidBirthday, isValidPhone } from "@/lib/utils";
 import type { Person } from "@/types";
 import { RelationshipSelector } from "@/components/relationships";
 import { RELATIONSHIP_CONFIG, type RelationshipType } from "@/types";
@@ -117,6 +117,13 @@ function EditPersonFormContent({
     const trimmedEmail = email.trim();
     if (trimmedEmail && !isValidEmail(trimmedEmail)) {
       toast.error("Please enter a valid email address");
+      return;
+    }
+
+    // Validate phone format
+    const trimmedPhone = phone.trim();
+    if (trimmedPhone && !isValidPhone(trimmedPhone)) {
+      toast.error("Please enter a valid phone number");
       return;
     }
 

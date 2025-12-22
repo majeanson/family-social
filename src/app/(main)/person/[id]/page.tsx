@@ -59,6 +59,7 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
+  Flower2,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -78,6 +79,7 @@ const EVENT_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>
   Briefcase,
   Palmtree,
   Calendar,
+  Flower2,
 };
 
 export default function PersonProfilePage({ params }: PageProps) {
@@ -200,21 +202,21 @@ export default function PersonProfilePage({ params }: PageProps) {
 
             {/* Info */}
             <div className="flex-1 space-y-3">
-              <div className="flex items-start justify-between">
+              <div className="space-y-4">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-3xl font-bold">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1 className="text-2xl sm:text-3xl font-bold">
                       {person.firstName} {person.lastName}
                     </h1>
                     {isThisPersonMe && (
-                      <Badge className="gap-1 bg-amber-500 hover:bg-amber-600">
-                        <Crown className="h-3 w-3" />
+                      <Badge className="gap-1 bg-amber-500 hover:bg-amber-600 shrink-0">
+                        <Crown className="h-3 w-3" aria-hidden="true" />
                         Me
                       </Badge>
                     )}
                   </div>
                   {person.nickname && (
-                    <p className="text-lg text-muted-foreground">&quot;{person.nickname}&quot;</p>
+                    <p className="text-base sm:text-lg text-muted-foreground">&quot;{person.nickname}&quot;</p>
                   )}
                   {myRelationshipLabel && (
                     <p className="text-sm text-primary font-medium">
@@ -222,33 +224,33 @@ export default function PersonProfilePage({ params }: PageProps) {
                     </p>
                   )}
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2 sm:justify-end w-full sm:w-auto mt-4 sm:mt-0">
+                <div className="flex flex-wrap gap-2">
                   {!isThisPersonMe && (
-                    <Button variant="outline" onClick={handleSetAsMe} title="Set this person as Me">
-                      <Crown className="h-4 w-4 mr-2" />
-                      Set as Me
+                    <Button variant="outline" size="sm" onClick={handleSetAsMe} aria-label={`Set ${person.firstName} as Me`}>
+                      <Crown className="h-4 w-4 sm:mr-2" aria-hidden="true" />
+                      <span className="hidden sm:inline">Set as Me</span>
                     </Button>
                   )}
                   {family && (
-                    <Button variant="outline" asChild>
+                    <Button variant="outline" size="sm" asChild aria-label={`View ${family.name} family tree`}>
                       <Link href={`/graph?family=${family.id}`}>
-                        <Network className="h-4 w-4 mr-2" />
-                        View Family
+                        <Network className="h-4 w-4 sm:mr-2" aria-hidden="true" />
+                        <span className="hidden sm:inline">View Family</span>
                       </Link>
                     </Button>
                   )}
                   <SharePersonDialog
                     person={person}
                     trigger={
-                      <Button variant="outline">
-                        <Share2 className="h-4 w-4 mr-2" />
-                        Share
+                      <Button variant="outline" size="sm" aria-label={`Share ${person.firstName}'s contact info`}>
+                        <Share2 className="h-4 w-4 sm:mr-2" aria-hidden="true" />
+                        <span className="hidden sm:inline">Share</span>
                       </Button>
                     }
                   />
-                  <Button variant="outline" onClick={() => setShowEditDialog(true)}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
+                  <Button variant="outline" size="sm" onClick={() => setShowEditDialog(true)} aria-label={`Edit ${person.firstName}'s profile`}>
+                    <Edit className="h-4 w-4 sm:mr-2" aria-hidden="true" />
+                    <span className="hidden sm:inline">Edit</span>
                   </Button>
                 </div>
               </div>

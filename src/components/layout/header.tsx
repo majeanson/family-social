@@ -34,12 +34,13 @@ export function Header() {
       >
         Skip to main content
       </a>
-      <div className="container flex h-14 items-center">
-        <div className="mr-4 flex">
-          <Link href="/" className="mr-6 flex items-center space-x-2">
-            <span className="font-bold">Family Social</span>
+      <div className="container flex h-14 items-center justify-between">
+        {/* Logo and Desktop Nav */}
+        <div className="flex items-center">
+          <Link href="/" className="flex items-center space-x-2">
+            <span className="font-bold text-lg">Family Social</span>
           </Link>
-          <nav className="hidden items-center space-x-6 text-sm font-medium md:flex">
+          <nav className="hidden items-center ml-8 space-x-6 text-sm font-medium md:flex">
             {navigation.map((item) => (
               <Link
                 key={item.href}
@@ -51,7 +52,7 @@ export function Header() {
                     : "text-foreground/60"
                 )}
               >
-                <item.icon className="h-4 w-4" />
+                <item.icon className="h-4 w-4" aria-hidden="true" />
                 {item.name}
               </Link>
             ))}
@@ -64,26 +65,31 @@ export function Header() {
         </div>
 
         {/* Mobile menu */}
-        <div className="flex flex-1 items-center justify-end gap-2 md:hidden">
+        <div className="flex items-center gap-1 md:hidden">
           <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="h-9 w-9">
                 <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle menu</span>
+                <span className="sr-only">Open navigation menu</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-48">
               {navigation.map((item) => (
                 <DropdownMenuItem key={item.href} asChild>
                   <Link
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-2",
-                      pathname === item.href && "font-medium"
+                      "flex items-center gap-3 w-full",
+                      pathname === item.href
+                        ? "font-medium text-foreground"
+                        : "text-muted-foreground"
                     )}
                   >
-                    <item.icon className="h-4 w-4" />
+                    <item.icon className={cn(
+                      "h-4 w-4",
+                      pathname === item.href && "text-primary"
+                    )} aria-hidden="true" />
                     {item.name}
                   </Link>
                 </DropdownMenuItem>

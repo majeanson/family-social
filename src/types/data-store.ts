@@ -28,6 +28,83 @@ export interface NotificationSettings {
   defaultEventTiming: ReminderTiming;
 }
 
+// Custom theme color configuration
+export interface ThemeColors {
+  primary?: string;       // Main action color (buttons, links)
+  secondary?: string;     // Secondary buttons/actions
+  accent?: string;        // Highlight/accent color
+  card?: string;          // Card backgrounds
+  background?: string;    // Page background
+  muted?: string;         // Subtle backgrounds
+}
+
+export interface CustomTheme {
+  light: ThemeColors;
+  dark: ThemeColors;
+}
+
+// Preset theme options
+export type ThemePreset = "default" | "ocean" | "forest" | "sunset" | "lavender" | "custom";
+
+export const THEME_PRESETS: Record<ThemePreset, CustomTheme> = {
+  default: {
+    light: {},
+    dark: {},
+  },
+  ocean: {
+    light: {
+      primary: "#0284c7",    // sky-600
+      accent: "#0ea5e9",     // sky-500
+      card: "#f0f9ff",       // sky-50
+    },
+    dark: {
+      primary: "#38bdf8",    // sky-400
+      accent: "#0ea5e9",     // sky-500
+      card: "#0c4a6e",       // sky-900
+    },
+  },
+  forest: {
+    light: {
+      primary: "#15803d",    // green-700
+      accent: "#22c55e",     // green-500
+      card: "#f0fdf4",       // green-50
+    },
+    dark: {
+      primary: "#4ade80",    // green-400
+      accent: "#22c55e",     // green-500
+      card: "#14532d",       // green-900
+    },
+  },
+  sunset: {
+    light: {
+      primary: "#ea580c",    // orange-600
+      accent: "#f97316",     // orange-500
+      card: "#fff7ed",       // orange-50
+    },
+    dark: {
+      primary: "#fb923c",    // orange-400
+      accent: "#f97316",     // orange-500
+      card: "#7c2d12",       // orange-900
+    },
+  },
+  lavender: {
+    light: {
+      primary: "#7c3aed",    // violet-600
+      accent: "#8b5cf6",     // violet-500
+      card: "#f5f3ff",       // violet-50
+    },
+    dark: {
+      primary: "#a78bfa",    // violet-400
+      accent: "#8b5cf6",     // violet-500
+      card: "#4c1d95",       // violet-900
+    },
+  },
+  custom: {
+    light: {},
+    dark: {},
+  },
+};
+
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   enabled: true,
   birthdayReminders: true,
@@ -46,6 +123,8 @@ export interface AppSettings {
   primaryUserId?: string; // ID of the "Me" person
   familyNames?: Record<string, string>; // Custom family names keyed by group root ID
   notifications?: NotificationSettings;
+  themePreset?: ThemePreset;
+  customTheme?: CustomTheme;
 }
 
 // Default family color palette
