@@ -5,6 +5,7 @@ import { useDataStore } from "@/stores/data-store";
 import { PersonCard } from "./person-card";
 import { QuickAddPerson } from "./quick-add-person";
 import { QuickReview } from "./quick-review";
+import { ShareFamilyDialog } from "./share-family-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useFamilyGroups, FAMILY_COLORS } from "@/features/use-family-groups";
-import { Plus, Search, Users, Filter, SortAsc, X, Network, LayoutGrid, Sparkles } from "lucide-react";
+import { Plus, Search, Users, Filter, SortAsc, X, Network, LayoutGrid, Sparkles, Share2, CheckSquare, Square } from "lucide-react";
 
 type SortOption = "firstName" | "lastName" | "birthday" | "createdAt";
 type ViewMode = "cards" | "quick";
@@ -39,6 +40,11 @@ export function PeopleView() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>(settings.sortBy);
+
+  // Multi-select state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedPeopleIds, setSelectedPeopleIds] = useState<string[]>([]);
+  const [showShareDialog, setShowShareDialog] = useState(false);
 
   // Get all unique tags
   const allTags = useMemo(() => {
@@ -107,6 +113,35 @@ export function PeopleView() {
     );
   };
 
+  const togglePersonSelection = (personId: string) => {
+    setSelectedPeopleIds((prev) =>
+      prev.includes(personId)
+        ? prev.filter((id) => id !== personId)
+        : [...prev, personId]
+    );
+  };
+
+  const selectAll = () => {
+    setSelectedPeopleIds(filteredPeople.map((p) => p.id));
+  };
+
+  const deselectAll = () => {
+    setSelectedPeopleIds([]);
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedPeopleIds([]);
+  };
+
+  const selectFamilyGroup = (familyId: string) => {
+    const group = familyGroups.find((g) => g.id === familyId);
+    if (group) {
+      setSelectedPeopleIds(group.memberIds);
+    }
+  };
+
+
   if (people.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -137,11 +172,80 @@ export function PeopleView() {
             {people.length} {people.length === 1 ? "person" : "people"} in your network
           </p>
         </div>
-        <Button onClick={() => setShowQuickAdd(true)} className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-          Add Person
-        </Button>
+        <div className="flex gap-2">
+          {!selectMode ? (
+            <>
+              <Button variant="outline" onClick={() => setSelectMode(true)} className="w-full sm:w-auto">
+                <CheckSquare className="mr-2 h-4 w-4" aria-hidden="true" />
+                Select
+              </Button>
+              <Button onClick={() => setShowQuickAdd(true)} className="w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+                Add Person
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={exitSelectMode} className="w-full sm:w-auto">
+                <X className="mr-2 h-4 w-4" aria-hidden="true" />
+                Cancel
+              </Button>
+              <Button onClick={() => setShowShareDialog(true)} disabled={selectedPeopleIds.length === 0} className="w-full sm:w-auto">
+                <Share2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                Share {selectedPeopleIds.length > 0 && `(${selectedPeopleIds.length})`}
+              </Button>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Select Mode Bar */}
+      {selectMode && (
+        <div className="flex flex-wrap items-center gap-3 p-3 bg-muted/50 rounded-lg border">
+          <span className="text-sm font-medium">{selectedPeopleIds.length} selected</span>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={selectAll}>
+              Select All ({filteredPeople.length})
+            </Button>
+            {selectedPeopleIds.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={deselectAll}>Deselect All</Button>
+            )}
+          </div>
+          {familyGroups.length > 0 && (
+            <>
+              <div className="h-4 w-px bg-border" />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <Network className="h-4 w-4 mr-1" />
+                    Select Family
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuLabel>Select all in family</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {familyGroups.map((group) => {
+                    const color = FAMILY_COLORS[group.colorIndex % FAMILY_COLORS.length];
+                    return (
+                      <DropdownMenuCheckboxItem
+                        key={group.id}
+                        checked={group.memberIds.every((id) => selectedPeopleIds.includes(id))}
+                        onCheckedChange={() => selectFamilyGroup(group.id)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full ${color.bg}`} />
+                          <span>{group.name}</span>
+                          <span className="text-xs text-muted-foreground">({group.memberIds.length})</span>
+                        </div>
+                      </DropdownMenuCheckboxItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          )}
+        </div>
+      )}
 
       {/* View Mode Tabs */}
       <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
@@ -328,7 +432,35 @@ export function PeopleView() {
           {filteredPeople.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredPeople.map((person) => (
-                <PersonCard key={person.id} person={person} />
+                <div key={person.id} className="relative">
+                  {selectMode && (
+                    <button
+                      type="button"
+                      onClick={() => togglePersonSelection(person.id)}
+                      className={`absolute -top-2 -left-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
+                        selectedPeopleIds.includes(person.id)
+                          ? "bg-primary border-primary text-primary-foreground"
+                          : "bg-background border-muted-foreground/30 hover:border-primary"
+                      }`}
+                      aria-label={`${selectedPeopleIds.includes(person.id) ? "Deselect" : "Select"} ${person.firstName}`}
+                    >
+                      {selectedPeopleIds.includes(person.id) ? (
+                        <CheckSquare className="h-3.5 w-3.5" />
+                      ) : (
+                        <Square className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  )}
+                  <div
+                    className={selectMode ? "cursor-pointer" : ""}
+                    onClick={selectMode ? () => togglePersonSelection(person.id) : undefined}
+                  >
+                    <PersonCard
+                      person={person}
+                      className={selectMode && selectedPeopleIds.includes(person.id) ? "ring-2 ring-primary" : ""}
+                    />
+                  </div>
+                </div>
               ))}
             </div>
           ) : (
@@ -356,6 +488,17 @@ export function PeopleView() {
       </Tabs>
 
       <QuickAddPerson open={showQuickAdd} onOpenChange={setShowQuickAdd} />
+
+      <ShareFamilyDialog
+        open={showShareDialog}
+        onOpenChange={(open) => {
+          setShowShareDialog(open);
+          if (!open) {
+            exitSelectMode();
+          }
+        }}
+        selectedPeopleIds={selectedPeopleIds}
+      />
     </div>
   );
 }

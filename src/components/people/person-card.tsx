@@ -19,10 +19,11 @@ import { FamilyBadge, FamilyDot } from "./family-badge";
 import { Calendar, Mail, Phone, StickyNote, ArrowUpRight, Crown } from "lucide-react";
 
 interface PersonCardProps {
+  className?: string;
   person: Person;
 }
 
-export const PersonCard = memo(function PersonCard({ person }: PersonCardProps) {
+export const PersonCard = memo(function PersonCard({ person, className }: PersonCardProps) {
   const { relationships, people, settings } = useDataStore();
   const { getFamilyGroup, getFamilyColor } = useFamilyGroups();
   const { isMe } = usePrimaryUser();
@@ -42,6 +43,7 @@ export const PersonCard = memo(function PersonCard({ person }: PersonCardProps) 
   return (
     <Link href={`/person/${person.id}`}>
       <Card className={cn(
+        className,
         "group cursor-pointer transition-all hover:shadow-md h-full",
         familyColor
           ? `${familyColor.light} ${familyColor.border} hover:border-opacity-60`

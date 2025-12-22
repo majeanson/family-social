@@ -147,7 +147,7 @@ export function parseJSONResponse(json: string): PersonFormData | null {
  */
 export function parseResponse(input: string): PersonFormData | null {
   // Try JSON first
-  let result = parseJSONResponse(input);
+  const result = parseJSONResponse(input);
   if (result) return result;
 
   // Fall back to text format
