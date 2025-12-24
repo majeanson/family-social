@@ -1,3 +1,11 @@
+export interface Address {
+  street?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+}
+
 export interface Person {
   id: string;
   firstName: string;
@@ -8,6 +16,7 @@ export interface Person {
   notes?: string;
   email?: string;
   phone?: string;
+  address?: Address;
   customFields: CustomField[];
   tags: string[];
   createdAt: string;

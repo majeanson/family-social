@@ -202,3 +202,199 @@ export function sanitizeFilename(name: string): string {
     .slice(0, 100) // Limit length
     || "file"; // Fallback if empty
 }
+
+/**
+ * Simple fuzzy matching - checks if all characters of query appear in text in order
+ * Returns match score (higher is better) or -1 if no match
+ */
+export function fuzzyMatch(text: string, query: string): number {
+  if (!query) return 1;
+  if (!text) return -1;
+
+  const textLower = text.toLowerCase();
+  const queryLower = query.toLowerCase();
+
+  // Exact match gets highest score
+  if (textLower === queryLower) return 100;
+
+  // Contains match gets good score
+  if (textLower.includes(queryLower)) {
+    // Bonus if at start of word
+    if (textLower.startsWith(queryLower)) return 90;
+    if (textLower.includes(` ${queryLower}`)) return 85;
+    return 80;
+  }
+
+  // Fuzzy match - all characters in order
+  let textIndex = 0;
+  let queryIndex = 0;
+  let score = 0;
+  let consecutiveBonus = 0;
+
+  while (textIndex < textLower.length && queryIndex < queryLower.length) {
+    if (textLower[textIndex] === queryLower[queryIndex]) {
+      queryIndex++;
+      score += 10 + consecutiveBonus;
+      consecutiveBonus = Math.min(consecutiveBonus + 5, 20); // Reward consecutive matches
+    } else {
+      consecutiveBonus = 0;
+    }
+    textIndex++;
+  }
+
+  // All query characters found?
+  if (queryIndex === queryLower.length) {
+    // Normalize score based on length ratio
+    const lengthRatio = queryLower.length / textLower.length;
+    return Math.round(score * lengthRatio);
+  }
+
+  return -1; // No match
+}
+
+/**
+ * Search across all fields of a person
+ * Returns match score or -1 if no match
+ */
+export function searchPerson(
+  person: {
+    firstName: string;
+    lastName: string;
+    nickname?: string;
+    email?: string;
+    phone?: string;
+    notes?: string;
+    tags: string[];
+    address?: {
+      street?: string;
+      city?: string;
+      state?: string;
+      postalCode?: string;
+      country?: string;
+    };
+    customFields?: Array<{ label: string; value: string }>;
+  },
+  query: string
+): number {
+  if (!query.trim()) return 1;
+
+  const searchTerms = query.toLowerCase().trim().split(/\s+/);
+  let totalScore = 0;
+  let matchedTerms = 0;
+
+  for (const term of searchTerms) {
+    let bestScore = -1;
+
+    // Check all fields
+    const fields = [
+      { value: person.firstName, weight: 3 },
+      { value: person.lastName, weight: 3 },
+      { value: person.nickname, weight: 2 },
+      { value: person.email, weight: 1 },
+      { value: person.phone, weight: 1 },
+      { value: person.notes, weight: 0.5 },
+      { value: person.address?.city, weight: 1.5 },
+      { value: person.address?.state, weight: 1 },
+      { value: person.address?.country, weight: 1 },
+      { value: person.address?.street, weight: 0.5 },
+      { value: person.address?.postalCode, weight: 0.5 },
+    ];
+
+    // Check main fields
+    for (const field of fields) {
+      if (field.value) {
+        const score = fuzzyMatch(field.value, term);
+        if (score > 0) {
+          bestScore = Math.max(bestScore, score * field.weight);
+        }
+      }
+    }
+
+    // Check tags
+    for (const tag of person.tags) {
+      const score = fuzzyMatch(tag, term);
+      if (score > 0) {
+        bestScore = Math.max(bestScore, score * 2);
+      }
+    }
+
+    // Check custom fields
+    if (person.customFields) {
+      for (const field of person.customFields) {
+        const labelScore = fuzzyMatch(field.label, term);
+        const valueScore = fuzzyMatch(field.value, term);
+        if (labelScore > 0) bestScore = Math.max(bestScore, labelScore * 0.5);
+        if (valueScore > 0) bestScore = Math.max(bestScore, valueScore * 0.5);
+      }
+    }
+
+    // Check full name
+    const fullName = `${person.firstName} ${person.lastName}`.trim();
+    const fullNameScore = fuzzyMatch(fullName, term);
+    if (fullNameScore > 0) {
+      bestScore = Math.max(bestScore, fullNameScore * 3);
+    }
+
+    if (bestScore > 0) {
+      totalScore += bestScore;
+      matchedTerms++;
+    }
+  }
+
+  // All terms must match
+  if (matchedTerms < searchTerms.length) return -1;
+
+  return totalScore / searchTerms.length;
+}
+
+/**
+ * Format an address for display
+ */
+export function formatAddress(address?: {
+  street?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+}): string | null {
+  if (!address) return null;
+
+  const parts: string[] = [];
+
+  if (address.street) parts.push(address.street);
+
+  const cityStateParts: string[] = [];
+  if (address.city) cityStateParts.push(address.city);
+  if (address.state) cityStateParts.push(address.state);
+  if (cityStateParts.length > 0) {
+    let cityState = cityStateParts.join(", ");
+    if (address.postalCode) cityState += ` ${address.postalCode}`;
+    parts.push(cityState);
+  } else if (address.postalCode) {
+    parts.push(address.postalCode);
+  }
+
+  if (address.country) parts.push(address.country);
+
+  return parts.length > 0 ? parts.join("\n") : null;
+}
+
+/**
+ * Format address as single line
+ */
+export function formatAddressLine(address?: {
+  street?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+}): string | null {
+  if (!address) return null;
+
+  const parts: string[] = [];
+  if (address.city) parts.push(address.city);
+  if (address.state) parts.push(address.state);
+  if (address.country && !address.state) parts.push(address.country);
+
+  return parts.length > 0 ? parts.join(", ") : null;
+}

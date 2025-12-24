@@ -26,9 +26,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useFamilyGroups, FAMILY_COLORS } from "@/features/use-family-groups";
+import { searchPerson } from "@/lib/utils";
+import { getBirthdaySortValue } from "@/lib/date-utils";
 import { Plus, Search, Users, Filter, SortAsc, X, Network, LayoutGrid, Sparkles, Share2, CheckSquare, Square } from "lucide-react";
 
-type SortOption = "firstName" | "lastName" | "birthday" | "createdAt";
+type SortOption = "firstName" | "lastName" | "birthday" | "upcomingBirthday" | "createdAt";
 type ViewMode = "cards" | "quick";
 
 export function PeopleView() {
@@ -58,53 +60,61 @@ export function PeopleView() {
 
   // Filter and sort people
   const filteredPeople = useMemo(() => {
-    const result = people.filter((person) => {
-      // Search filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const matches =
-          person.firstName.toLowerCase().includes(query) ||
-          person.lastName.toLowerCase().includes(query) ||
-          person.nickname?.toLowerCase().includes(query) ||
-          person.tags.some((tag) => tag.toLowerCase().includes(query));
-        if (!matches) return false;
-      }
+    // First filter with search scores
+    const scored = people
+      .map((person) => {
+        // Search filter using fuzzy matching
+        const searchScore = searchQuery ? searchPerson(person, searchQuery) : 1;
+        return { person, searchScore };
+      })
+      .filter(({ person, searchScore }) => {
+        // Exclude non-matches
+        if (searchScore < 0) return false;
 
-      // Tag filter
-      if (selectedTags.length > 0) {
-        const hasTag = selectedTags.some((tag) => person.tags.includes(tag));
-        if (!hasTag) return false;
-      }
+        // Tag filter
+        if (selectedTags.length > 0) {
+          const hasTag = selectedTags.some((tag) => person.tags.includes(tag));
+          if (!hasTag) return false;
+        }
 
-      // Family filter
-      if (selectedFamilyId) {
-        const family = getFamilyGroup(person.id);
-        if (!family || family.id !== selectedFamilyId) return false;
-      }
+        // Family filter
+        if (selectedFamilyId) {
+          const family = getFamilyGroup(person.id);
+          if (!family || family.id !== selectedFamilyId) return false;
+        }
 
-      return true;
-    });
+        return true;
+      });
 
     // Sort
-    result.sort((a, b) => {
+    scored.sort((a, b) => {
+      // If searching, prioritize by search score first
+      if (searchQuery && a.searchScore !== b.searchScore) {
+        return b.searchScore - a.searchScore;
+      }
+
       switch (sortBy) {
         case "firstName":
-          return a.firstName.localeCompare(b.firstName);
+          return a.person.firstName.localeCompare(b.person.firstName);
         case "lastName":
-          return (a.lastName || "").localeCompare(b.lastName || "");
+          return (a.person.lastName || "").localeCompare(b.person.lastName || "");
         case "birthday":
-          if (!a.birthday && !b.birthday) return 0;
-          if (!a.birthday) return 1;
-          if (!b.birthday) return -1;
-          return a.birthday.localeCompare(b.birthday);
+          // Sort by year (oldest to youngest)
+          if (!a.person.birthday && !b.person.birthday) return 0;
+          if (!a.person.birthday) return 1;
+          if (!b.person.birthday) return -1;
+          return a.person.birthday.localeCompare(b.person.birthday);
+        case "upcomingBirthday":
+          // Sort by upcoming birthday (ignores year)
+          return getBirthdaySortValue(a.person.birthday) - getBirthdaySortValue(b.person.birthday);
         case "createdAt":
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return new Date(b.person.createdAt).getTime() - new Date(a.person.createdAt).getTime();
         default:
           return 0;
       }
     });
 
-    return result;
+    return scored.map(({ person }) => person);
   }, [people, searchQuery, selectedTags, selectedFamilyId, sortBy, getFamilyGroup]);
 
   const toggleTag = (tag: string) => {
@@ -137,7 +147,7 @@ export function PeopleView() {
   const selectFamilyGroup = (familyId: string) => {
     const group = familyGroups.find((g) => g.id === familyId);
     if (group) {
-      setSelectedPeopleIds(group.memberIds);
+      setSelectedPeopleIds(Array.from(group.memberIds));
     }
   };
 
@@ -229,13 +239,13 @@ export function PeopleView() {
                     return (
                       <DropdownMenuCheckboxItem
                         key={group.id}
-                        checked={group.memberIds.every((id) => selectedPeopleIds.includes(id))}
+                        checked={Array.from(group.memberIds).every((id) => selectedPeopleIds.includes(id))}
                         onCheckedChange={() => selectFamilyGroup(group.id)}
                       >
                         <div className="flex items-center gap-2">
                           <div className={`w-3 h-3 rounded-full ${color.bg}`} />
                           <span>{group.name}</span>
-                          <span className="text-xs text-muted-foreground">({group.memberIds.length})</span>
+                          <span className="text-xs text-muted-foreground">({group.memberIds.size})</span>
                         </div>
                       </DropdownMenuCheckboxItem>
                     );
@@ -372,10 +382,16 @@ export function PeopleView() {
                     Last Name
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem
+                    checked={sortBy === "upcomingBirthday"}
+                    onCheckedChange={() => setSortBy("upcomingBirthday")}
+                  >
+                    Upcoming Birthday
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
                     checked={sortBy === "birthday"}
                     onCheckedChange={() => setSortBy("birthday")}
                   >
-                    Birthday
+                    Age (Oldest First)
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem
                     checked={sortBy === "createdAt"}

@@ -93,6 +93,13 @@ function EditPersonFormContent({
   const [tags, setTags] = useState<string[]>([...person.tags]);
   const [newTag, setNewTag] = useState("");
 
+  // Address state
+  const [addressStreet, setAddressStreet] = useState(person.address?.street || "");
+  const [addressCity, setAddressCity] = useState(person.address?.city || "");
+  const [addressState, setAddressState] = useState(person.address?.state || "");
+  const [addressPostalCode, setAddressPostalCode] = useState(person.address?.postalCode || "");
+  const [addressCountry, setAddressCountry] = useState(person.address?.country || "");
+
   // Relationship state
   const [newRelationshipPersonId, setNewRelationshipPersonId] = useState("");
   const [newRelationshipType, setNewRelationshipType] = useState<RelationshipType>("friend");
@@ -134,6 +141,17 @@ function EditPersonFormContent({
       return;
     }
 
+    // Build address object only if any field is filled
+    const address = (addressStreet || addressCity || addressState || addressPostalCode || addressCountry)
+      ? {
+          street: addressStreet.trim() || undefined,
+          city: addressCity.trim() || undefined,
+          state: addressState.trim() || undefined,
+          postalCode: addressPostalCode.trim() || undefined,
+          country: addressCountry.trim() || undefined,
+        }
+      : undefined;
+
     updatePerson(person.id, {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
@@ -144,11 +162,12 @@ function EditPersonFormContent({
       birthday: birthday || undefined,
       notes: notes.trim() || undefined,
       tags,
+      address,
     });
 
     toast.success(`${firstName} updated successfully`);
     onClose();
-  }, [firstName, lastName, nickname, photo, email, phone, birthday, notes, tags, person.id, updatePerson, onClose]);
+  }, [firstName, lastName, nickname, photo, email, phone, birthday, notes, tags, addressStreet, addressCity, addressState, addressPostalCode, addressCountry, person.id, updatePerson, onClose]);
 
   const handleDeleteClick = useCallback(() => {
     setShowDeleteConfirm(true);
@@ -322,6 +341,69 @@ function EditPersonFormContent({
               value={birthday}
               onChange={(e) => setBirthday(e.target.value)}
             />
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Address */}
+        <div className="space-y-4">
+          <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+            Address
+          </h3>
+
+          <div className="space-y-2">
+            <Label htmlFor="addressStreet">Street</Label>
+            <Input
+              id="addressStreet"
+              value={addressStreet}
+              onChange={(e) => setAddressStreet(e.target.value)}
+              placeholder="123 Main St"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="addressCity">City</Label>
+              <Input
+                id="addressCity"
+                value={addressCity}
+                onChange={(e) => setAddressCity(e.target.value)}
+                placeholder="City"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="addressState">State/Province</Label>
+              <Input
+                id="addressState"
+                value={addressState}
+                onChange={(e) => setAddressState(e.target.value)}
+                placeholder="State"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="addressPostalCode">Postal Code</Label>
+              <Input
+                id="addressPostalCode"
+                value={addressPostalCode}
+                onChange={(e) => setAddressPostalCode(e.target.value)}
+                placeholder="12345"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="addressCountry">Country</Label>
+              <Input
+                id="addressCountry"
+                value={addressCountry}
+                onChange={(e) => setAddressCountry(e.target.value)}
+                placeholder="Country"
+              />
+            </div>
           </div>
         </div>
 

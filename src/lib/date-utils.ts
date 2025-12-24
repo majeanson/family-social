@@ -198,3 +198,50 @@ export function getRelativeTime(dateString: string): string {
   if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
   return `${Math.floor(diffDays / 365)} years ago`;
 }
+
+/**
+ * Get birthday as day-of-year (1-366) for sorting by upcoming birthday
+ * January 1 = 1, December 31 = 365/366
+ * Returns a value relative to today so upcoming birthdays sort first
+ */
+export function getBirthdaySortValue(birthday: string | undefined): number {
+  if (!birthday) return 999; // No birthday goes to end
+
+  try {
+    const date = new Date(birthday + "T00:00:00");
+    if (isNaN(date.getTime())) return 999;
+
+    const today = new Date();
+    const month = date.getMonth();
+    const day = date.getDate();
+    const todayMonth = today.getMonth();
+    const todayDay = today.getDate();
+
+    // Calculate day of year for the birthday (ignoring year)
+    const birthdayDayOfYear = getDayOfYear(month, day);
+    const todayDayOfYear = getDayOfYear(todayMonth, todayDay);
+
+    // Calculate days until birthday (wrapping around year)
+    let daysUntil = birthdayDayOfYear - todayDayOfYear;
+    if (daysUntil < 0) {
+      daysUntil += 366; // Add a year's worth of days
+    }
+
+    return daysUntil;
+  } catch {
+    return 999;
+  }
+}
+
+/**
+ * Get day of year for a given month and day
+ */
+function getDayOfYear(month: number, day: number): number {
+  // Days in each month (using leap year to handle Feb 29)
+  const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  let dayOfYear = day;
+  for (let i = 0; i < month; i++) {
+    dayOfYear += daysInMonth[i];
+  }
+  return dayOfYear;
+}

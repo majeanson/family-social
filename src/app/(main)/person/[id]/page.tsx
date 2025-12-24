@@ -60,10 +60,11 @@ import {
   Pencil,
   Trash2,
   Flower2,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { getInitials, cn, getRelationshipColor } from "@/lib/utils";
+import { getInitials, cn, getRelationshipColor, formatAddressLine } from "@/lib/utils";
 import type { RelationshipType } from "@/types";
 
 interface PageProps {
@@ -80,6 +81,7 @@ const EVENT_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>
   Palmtree,
   Calendar,
   Flower2,
+  MapPin,
 };
 
 export default function PersonProfilePage({ params }: PageProps) {
@@ -305,6 +307,18 @@ export default function PersonProfilePage({ params }: PageProps) {
                       <p className="text-muted-foreground">Phone</p>
                     </div>
                   </a>
+                )}
+
+                {person.address && formatAddressLine(person.address) && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <div className="p-2 rounded-full bg-muted">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{formatAddressLine(person.address)}</p>
+                      <p className="text-muted-foreground">Address</p>
+                    </div>
+                  </div>
                 )}
               </div>
 

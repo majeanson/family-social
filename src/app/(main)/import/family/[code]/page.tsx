@@ -177,13 +177,12 @@ export default function ImportFamilyPage() {
 
           // Only add if both people were imported
           if (personAId && personBId) {
-            addRelationship({
+            addRelationship(
               personAId,
               personBId,
-              type: rel.type as RelationshipType,
-              reverseType: rel.reverseType as RelationshipType | undefined,
-              label: rel.label,
-            });
+              rel.type as RelationshipType,
+              rel.label
+            );
           }
         }
       }
