@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, GitBranch, FileText, Settings, Menu, LayoutDashboard, CalendarDays } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Users, GitBranch, FileText, Settings, LayoutDashboard, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -34,69 +27,39 @@ export function Header() {
       >
         Skip to main content
       </a>
-      <div className="container flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Logo and Desktop Nav */}
-        <div className="flex items-center">
-          <Link href="/" className="flex items-center space-x-2">
-            <span className="font-bold text-lg">Famolo</span>
-          </Link>
-          <nav className="hidden items-center ml-8 space-x-6 text-sm font-medium md:flex">
-            {navigation.map((item) => (
+      <div className="container flex h-14 items-center justify-between px-2 sm:px-4 lg:px-8">
+        {/* Logo */}
+        <Link href="/" className="flex items-center shrink-0">
+          <span className="font-bold text-lg">Famolo</span>
+        </Link>
+
+        {/* Navigation - always visible icons */}
+        <nav className="flex items-center gap-1 sm:gap-2">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href;
+            return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-2 transition-colors hover:text-foreground/80",
-                  pathname === item.href
-                    ? "text-foreground"
-                    : "text-foreground/60"
+                  "flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 rounded-md text-sm font-medium transition-colors",
+                  "hover:bg-accent hover:text-accent-foreground",
+                  isActive
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground"
                 )}
+                aria-label={item.name}
+                aria-current={isActive ? "page" : undefined}
               >
-                <item.icon className="h-4 w-4" aria-hidden="true" />
-                {item.name}
+                <item.icon className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
+                <span className="hidden lg:inline">{item.name}</span>
               </Link>
-            ))}
-          </nav>
-        </div>
-
-        {/* Theme toggle - desktop */}
-        <div className="hidden md:flex items-center">
-          <ThemeToggle />
-        </div>
-
-        {/* Mobile menu */}
-        <div className="flex items-center gap-1 md:hidden">
-          <ThemeToggle />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Open navigation menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              {navigation.map((item) => (
-                <DropdownMenuItem key={item.href} asChild>
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-3 w-full",
-                      pathname === item.href
-                        ? "font-medium text-foreground"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    <item.icon className={cn(
-                      "h-4 w-4",
-                      pathname === item.href && "text-primary"
-                    )} aria-hidden="true" />
-                    {item.name}
-                  </Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+            );
+          })}
+          <div className="ml-1 sm:ml-2">
+            <ThemeToggle />
+          </div>
+        </nav>
       </div>
     </header>
   );
