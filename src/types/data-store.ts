@@ -125,6 +125,7 @@ export interface AppSettings {
   notifications?: NotificationSettings;
   themePreset?: ThemePreset;
   customTheme?: CustomTheme;
+  tabsBackground?: string; // Custom background color for tab bar
 }
 
 // Default family color palette

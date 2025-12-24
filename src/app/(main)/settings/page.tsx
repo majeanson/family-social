@@ -278,7 +278,10 @@ export default function SettingsPage() {
 
       {/* Tabbed Interface */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList
+          className="grid w-full grid-cols-5"
+          style={settings.tabsBackground ? { backgroundColor: settings.tabsBackground } : undefined}
+        >
           <TabsTrigger value="sync" className="gap-1.5">
             <Cloud className="h-4 w-4" />
             <span className="hidden sm:inline">Sync</span>
@@ -753,6 +756,52 @@ export default function SettingsPage() {
                     );
                   })}
                 </div>
+              </div>
+
+              <Separator />
+
+              {/* Tab Bar Background */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Tab Bar Background</Label>
+                  {settings.tabsBackground && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => updateSettings({ tabsBackground: undefined })}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Reset
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Customize the background color of the settings tab bar
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    value={settings.tabsBackground || "#f4f4f5"}
+                    onChange={(e) => updateSettings({ tabsBackground: e.target.value })}
+                    className="w-12 h-10 p-1 cursor-pointer rounded border"
+                  />
+                  <Input
+                    type="text"
+                    value={settings.tabsBackground || ""}
+                    onChange={(e) => updateSettings({ tabsBackground: e.target.value || undefined })}
+                    placeholder="Default"
+                    className="font-mono text-sm flex-1"
+                  />
+                </div>
+                {/* Preview */}
+                {settings.tabsBackground && (
+                  <div
+                    className="p-3 rounded-lg border text-sm text-center"
+                    style={{ backgroundColor: settings.tabsBackground }}
+                  >
+                    Preview of tab bar background
+                  </div>
+                )}
               </div>
 
               {/* Custom Theme Editor */}
