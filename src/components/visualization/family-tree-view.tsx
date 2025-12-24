@@ -275,7 +275,7 @@ export function FamilyTreeView() {
     // pos.x/y are relative to content center, so -pos.x brings that point to center
     setPan({
       x: -pos.x,
-      y: -pos.y + 50, // Slight offset to show person in upper-center area
+      y: -pos.y,
     });
     setZoom(1);
   }, [nodePositions]);
