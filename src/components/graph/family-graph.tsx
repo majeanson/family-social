@@ -518,6 +518,9 @@ function calculateLayout(
   });
 
   // Create edges
+  // Debug: log all relationships and their types
+  console.log("Creating edges for relationships:", filteredRelationships.map(r => ({ id: r.id, type: r.type, from: r.personAId, to: r.personBId })));
+
   filteredRelationships.forEach((r) => {
     const config = RELATIONSHIP_CONFIG[r.type as keyof typeof RELATIONSHIP_CONFIG];
     const hexColor = getRelationshipHex(r.type as RelationshipType, relationshipColors);
@@ -525,6 +528,10 @@ function calculateLayout(
     // Make edges more visible, especially siblings
     const isSibling = r.type === "sibling";
     const isSpouseOrPartner = r.type === "spouse" || r.type === "partner";
+
+    if (isSibling) {
+      console.log("Creating SIBLING edge:", r.id, "between", r.personAId, "and", r.personBId, "color:", hexColor);
+    }
 
     edges.push({
       id: r.id,
