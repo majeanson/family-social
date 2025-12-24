@@ -10,7 +10,7 @@ import type { DataStore } from "@/types";
 // Configuration
 const SCOPES = "https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file";
 const DISCOVERY_DOC = "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest";
-const FILE_NAME = "family-social-data.json";
+const FILE_NAME = "famolo-data.json";
 
 // Types for Google API
 interface TokenClient {

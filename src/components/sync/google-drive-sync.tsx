@@ -3,14 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useDataStore } from "@/stores/data-store";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   Cloud,
@@ -231,69 +223,41 @@ export function GoogleDriveSync() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Cloud className="h-5 w-5" />
-            Google Drive Sync
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-4">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   if (!isConfigured) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CloudOff className="h-5 w-5 text-muted-foreground" />
-            Google Drive Sync
-          </CardTitle>
-          <CardDescription>
-            Cloud sync is not configured
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-lg border border-dashed p-4 text-center">
-            <AlertCircle className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground mb-2">
-              To enable Google Drive sync, set the <code className="bg-muted px-1 rounded">NEXT_PUBLIC_GOOGLE_CLIENT_ID</code> environment variable.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              You&apos;ll need to create a Google Cloud project and OAuth credentials.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="rounded-lg border border-dashed p-4 text-center">
+        <CloudOff className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+        <p className="text-sm text-muted-foreground mb-2">
+          Cloud sync is not configured yet.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Contact the app administrator to enable Google Drive sync.
+        </p>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Cloud className="h-5 w-5" />
-          Google Drive Sync
-          {isConnected && (
-            <Badge variant="default" className="ml-auto">
-              <CheckCircle2 className="h-3 w-3 mr-1" />
-              Connected
-            </Badge>
-          )}
-        </CardTitle>
-        <CardDescription>
-          {isConnected
-            ? "Your data is synced with Google Drive"
-            : "Connect to sync your data across devices"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
+      {isConnected && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+          <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-green-800 dark:text-green-200">Connected to Google Drive</p>
+            {lastSyncTime && (
+              <p className="text-xs text-green-600 dark:text-green-400">
+                Last synced: {lastSyncTime.toLocaleString()}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
         {error && (
           <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive flex items-center gap-2">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
@@ -301,76 +265,69 @@ export function GoogleDriveSync() {
           </div>
         )}
 
-        {isConnected ? (
-          <>
-            {lastSyncTime && (
-              <p className="text-sm text-muted-foreground">
-                Last synced: {lastSyncTime.toLocaleString()}
-              </p>
-            )}
-
-            <div className="grid gap-2 sm:grid-cols-3">
-              <Button
-                variant="default"
-                onClick={handleSync}
-                disabled={syncStatus !== "idle"}
-              >
-                {syncStatus === "syncing" ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                )}
-                Sync
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={handleUpload}
-                disabled={syncStatus !== "idle"}
-              >
-                {syncStatus === "uploading" ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="mr-2 h-4 w-4" />
-                )}
-                Upload
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={handleDownload}
-                disabled={syncStatus !== "idle"}
-              >
-                {syncStatus === "downloading" ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="mr-2 h-4 w-4" />
-                )}
-                Download
-              </Button>
-            </div>
+      {isConnected ? (
+        <>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Button
+              variant="default"
+              onClick={handleSync}
+              disabled={syncStatus !== "idle"}
+            >
+              {syncStatus === "syncing" ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Sync Now
+            </Button>
 
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDisconnect}
-              className="w-full"
+              variant="outline"
+              onClick={handleUpload}
+              disabled={syncStatus !== "idle"}
             >
-              <LogOut className="mr-2 h-4 w-4" />
-              Disconnect
+              {syncStatus === "uploading" ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="mr-2 h-4 w-4" />
+              )}
+              Upload
             </Button>
-          </>
-        ) : (
-          <Button onClick={handleConnect} className="w-full">
-            <Cloud className="mr-2 h-4 w-4" />
-            Connect to Google Drive
-          </Button>
-        )}
 
-        <p className="text-xs text-muted-foreground text-center">
-          Your data is stored in a private app folder that only you can access.
-        </p>
-      </CardContent>
-    </Card>
+            <Button
+              variant="outline"
+              onClick={handleDownload}
+              disabled={syncStatus !== "idle"}
+            >
+              {syncStatus === "downloading" ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Download
+            </Button>
+          </div>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDisconnect}
+            className="w-full"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Disconnect from Google Drive
+          </Button>
+        </>
+      ) : (
+        <Button onClick={handleConnect} className="w-full" size="lg">
+          <Cloud className="mr-2 h-5 w-5" />
+          Connect to Google Drive
+        </Button>
+      )}
+
+      <p className="text-xs text-muted-foreground text-center">
+        Your data is stored in a private app folder that only you can access.
+      </p>
+    </div>
   );
 }
