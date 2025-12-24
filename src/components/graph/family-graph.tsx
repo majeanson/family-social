@@ -226,9 +226,9 @@ function calculateRadialPositions(
     }
   });
 
-  // Position nodes
-  const centerX = 400;
-  const centerY = 300;
+  // Position nodes (centered at 0,0 - fitView will handle viewport centering)
+  const centerX = 0;
+  const centerY = 0;
   const baseLayerSpacing = 220;
   const minNodeSpacing = 160;
 
@@ -302,15 +302,16 @@ function calculateHierarchicalPositions(
     }
   });
 
-  // Position nodes in hierarchical tree
-  const startY = 50;
+  // Position nodes in hierarchical tree (centered at 0,0)
   const layerHeight = 150;
   const nodeSpacing = 180;
+  const totalHeight = (layers.length - 1) * layerHeight;
+  const startY = -totalHeight / 2;
 
   layers.forEach((layer, layerIndex) => {
     const y = startY + layerIndex * layerHeight;
     const totalWidth = (layer.length - 1) * nodeSpacing;
-    const startX = 400 - totalWidth / 2;
+    const startX = -totalWidth / 2;
 
     layer.forEach((personId, index) => {
       positions.set(personId, {
@@ -331,9 +332,9 @@ function calculateForcePositions(
 ): Map<string, { x: number; y: number }> {
   const positions = new Map<string, { x: number; y: number }>();
 
-  // Initialize with random positions
-  const centerX = 400;
-  const centerY = 300;
+  // Initialize with positions around center (0,0)
+  const centerX = 0;
+  const centerY = 0;
 
   filteredPeople.forEach((p, i) => {
     if (p.id === centerPerson.id) {
@@ -455,7 +456,7 @@ function calculateLayout(
 
   // Create nodes
   filteredPeople.forEach((person) => {
-    const pos = positions.get(person.id) || { x: 400, y: 300 };
+    const pos = positions.get(person.id) || { x: 0, y: 0 };
     nodes.push({
       id: person.id,
       type: "person",
@@ -579,14 +580,11 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }
           nodeTypes={nodeTypes}
           fitView
           fitViewOptions={{
-            padding: 0.3,
+            padding: 0.2,
             includeHiddenNodes: false,
-            minZoom: 0.5,
-            maxZoom: 1.5,
           }}
           minZoom={0.1}
           maxZoom={2}
-          nodeOrigin={[0.5, 0.5]}
           defaultEdgeOptions={{
             type: "smoothstep",
           }}
