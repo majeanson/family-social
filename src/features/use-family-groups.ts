@@ -112,8 +112,9 @@ export function useFamilyGroups() {
     ? settings.familyColors
     : DEFAULT_FAMILY_COLORS;
 
-  // Get custom family names from settings
+  // Get custom family names and overrides from settings
   const customFamilyNames = settings.familyNames || {};
+  const familyOverrides = settings.familyOverrides || {};
 
   const familyGroups = useMemo(() => {
     const groups = detectFamilyGroups(people, relationships);
@@ -124,16 +125,27 @@ export function useFamilyGroups() {
     }));
   }, [people, relationships, customFamilyNames]);
 
-  // Map from person ID to their family group
+  // Map from person ID to their family group (with overrides applied)
   const personFamilyMap = useMemo(() => {
     const map = new Map<string, FamilyGroup>();
+
+    // First, set auto-detected families
     familyGroups.forEach(group => {
       group.memberIds.forEach(memberId => {
         map.set(memberId, group);
       });
     });
+
+    // Then apply manual overrides
+    Object.entries(familyOverrides).forEach(([personId, targetFamilyId]) => {
+      const targetFamily = familyGroups.find(g => g.id === targetFamilyId);
+      if (targetFamily) {
+        map.set(personId, targetFamily);
+      }
+    });
+
     return map;
-  }, [familyGroups]);
+  }, [familyGroups, familyOverrides]);
 
   // Get family color for a person
   const getFamilyColor = (personId: string) => {
@@ -159,13 +171,44 @@ export function useFamilyGroups() {
     updateSettings({ familyNames: Object.keys(rest).length > 0 ? rest : undefined });
   };
 
+  // Set a manual family override for a person
+  const setFamilyOverride = (personId: string, targetFamilyId: string) => {
+    const updatedOverrides = { ...familyOverrides, [personId]: targetFamilyId };
+    updateSettings({ familyOverrides: updatedOverrides });
+  };
+
+  // Clear the family override for a person (revert to auto-detection)
+  const clearFamilyOverride = (personId: string) => {
+    const { [personId]: _, ...rest } = familyOverrides;
+    updateSettings({ familyOverrides: Object.keys(rest).length > 0 ? rest : undefined });
+  };
+
+  // Check if a person has a manual family override
+  const hasFamilyOverride = (personId: string) => {
+    return personId in familyOverrides;
+  };
+
+  // Get the auto-detected family (ignoring overrides)
+  const getAutoDetectedFamily = (personId: string) => {
+    for (const group of familyGroups) {
+      if (group.memberIds.has(personId)) {
+        return group;
+      }
+    }
+    return null;
+  };
+
   return {
     familyGroups,
     getFamilyColor,
     getFamilyGroup,
+    getAutoDetectedFamily,
     personFamilyMap,
     colors,
     renameFamilyGroup,
     resetFamilyName,
+    setFamilyOverride,
+    clearFamilyOverride,
+    hasFamilyOverride,
   };
 }

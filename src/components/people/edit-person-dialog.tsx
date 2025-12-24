@@ -36,11 +36,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { X, Plus, Trash2, Users, UserPlus, MapPin } from "lucide-react";
+import { X, Plus, Trash2, Users, UserPlus, MapPin, Home, RotateCcw } from "lucide-react";
 import { isValidEmail, isValidBirthday, isValidPhone } from "@/lib/utils";
 import type { Person } from "@/types";
 import { RelationshipSelector } from "@/components/relationships";
 import { RELATIONSHIP_CONFIG, type RelationshipType } from "@/types";
+import { useFamilyGroups } from "@/features";
 
 // Relationship types that should be propagated to spouse/partner
 const SPOUSE_PROPAGATABLE_TYPES: RelationshipType[] = ["child", "grandchild", "parent", "grandparent"];
@@ -102,6 +103,15 @@ function EditPersonFormContent({
     addRelationship,
     deleteRelationship,
   } = useDataStore();
+
+  const {
+    familyGroups,
+    getFamilyGroup,
+    getAutoDetectedFamily,
+    setFamilyOverride,
+    clearFamilyOverride,
+    hasFamilyOverride,
+  } = useFamilyGroups();
 
   // Form state initialized from person props
   const [firstName, setFirstName] = useState(person.firstName);
@@ -944,6 +954,82 @@ function EditPersonFormContent({
         </div>
 
         <Separator />
+
+        {/* Family Assignment */}
+        {familyGroups.length > 0 && (
+          <>
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                <Home className="h-4 w-4" />
+                Family
+              </h3>
+
+              <div className="space-y-3">
+                {/* Current family info */}
+                <div className="p-3 rounded-lg border bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">
+                        {getFamilyGroup(person.id)?.name || "No family assigned"}
+                      </p>
+                      {hasFamilyOverride(person.id) && (
+                        <p className="text-xs text-muted-foreground">
+                          Manually assigned (auto-detected: {getAutoDetectedFamily(person.id)?.name || "None"})
+                        </p>
+                      )}
+                    </div>
+                    {hasFamilyOverride(person.id) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          clearFamilyOverride(person.id);
+                          toast.success("Family reset to auto-detected");
+                        }}
+                        className="h-8"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-1" />
+                        Reset
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Change family dropdown */}
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={getFamilyGroup(person.id)?.id || ""}
+                    onValueChange={(familyId) => {
+                      if (familyId) {
+                        setFamilyOverride(person.id, familyId);
+                        const family = familyGroups.find(f => f.id === familyId);
+                        toast.success(`Assigned to ${family?.name}`);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Change family..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {familyGroups.map((family) => (
+                        <SelectItem key={family.id} value={family.id}>
+                          {family.name} ({family.memberIds.size} members)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Families are auto-detected from relationships. You can manually override if needed.
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+          </>
+        )}
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button

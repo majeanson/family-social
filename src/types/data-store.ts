@@ -122,6 +122,7 @@ export interface AppSettings {
   relationshipColors?: Record<string, string>;
   primaryUserId?: string; // ID of the "Me" person
   familyNames?: Record<string, string>; // Custom family names keyed by group root ID
+  familyOverrides?: Record<string, string>; // Manual family assignments: personId -> familyGroupId
   notifications?: NotificationSettings;
   themePreset?: ThemePreset;
   customTheme?: CustomTheme;
