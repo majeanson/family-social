@@ -76,12 +76,13 @@ import { GoogleDriveSync } from "@/components/sync/google-drive-sync";
 import { useFamilyGroups, usePrimaryUser } from "@/features";
 import { COLOR_OPTIONS, RELATIONSHIP_COLOR_OPTIONS, getRelationshipColor, getInitials } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { FamilyExportImport } from "@/components/settings";
 
 // Settings sections for search
 const SETTINGS_SECTIONS = [
-  { id: "sync", tab: "sync", keywords: ["sync", "google", "drive", "cloud", "backup", "upload", "download", "link", "share"] },
+  { id: "sync", tab: "sync", keywords: ["sync", "google", "drive", "cloud", "backup", "upload", "download", "link", "share", "family"] },
   { id: "data", tab: "sync", keywords: ["data", "summary", "storage", "people", "relationships"] },
-  { id: "import-export", tab: "sync", keywords: ["import", "export", "backup", "file", "json", "link", "paste"] },
+  { id: "import-export", tab: "sync", keywords: ["import", "export", "backup", "file", "json", "link", "paste", "family"] },
   { id: "profile", tab: "profile", keywords: ["me", "profile", "primary", "user", "myself"] },
   { id: "theme", tab: "appearance", keywords: ["theme", "dark", "light", "mode", "color", "appearance"] },
   { id: "display", tab: "appearance", keywords: ["display", "view", "sort", "cards", "graph"] },
@@ -497,6 +498,9 @@ export default function SettingsPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Family Export/Import */}
+          <FamilyExportImport />
         </TabsContent>
 
         {/* PROFILE TAB */}

@@ -267,45 +267,92 @@ export function GoogleDriveSync() {
 
       {isConnected ? (
         <>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <Button
-              variant="default"
-              onClick={handleSync}
-              disabled={syncStatus !== "idle"}
-            >
-              {syncStatus === "syncing" ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              Sync Now
-            </Button>
+          <div className="grid gap-3">
+            {/* Sync Now */}
+            <div className="p-3 rounded-lg border bg-primary/5">
+              <div className="flex items-start gap-3">
+                <RefreshCw className="h-5 w-5 text-primary mt-0.5" />
+                <div className="flex-1 space-y-2">
+                  <div>
+                    <p className="font-medium text-sm">Sync Now</p>
+                    <p className="text-xs text-muted-foreground">
+                      Smart sync: uploads your changes if you have any, otherwise downloads the latest from the cloud.
+                    </p>
+                  </div>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleSync}
+                    disabled={syncStatus !== "idle"}
+                  >
+                    {syncStatus === "syncing" ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                    )}
+                    Sync Now
+                  </Button>
+                </div>
+              </div>
+            </div>
 
-            <Button
-              variant="outline"
-              onClick={handleUpload}
-              disabled={syncStatus !== "idle"}
-            >
-              {syncStatus === "uploading" ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Upload className="mr-2 h-4 w-4" />
-              )}
-              Upload
-            </Button>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {/* Upload */}
+              <div className="p-3 rounded-lg border">
+                <div className="flex items-start gap-3">
+                  <Upload className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <p className="font-medium text-sm">Upload</p>
+                      <p className="text-xs text-muted-foreground">
+                        Overwrite cloud data with your local data.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleUpload}
+                      disabled={syncStatus !== "idle"}
+                    >
+                      {syncStatus === "uploading" ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="mr-2 h-4 w-4" />
+                      )}
+                      Upload
+                    </Button>
+                  </div>
+                </div>
+              </div>
 
-            <Button
-              variant="outline"
-              onClick={handleDownload}
-              disabled={syncStatus !== "idle"}
-            >
-              {syncStatus === "downloading" ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="mr-2 h-4 w-4" />
-              )}
-              Download
-            </Button>
+              {/* Download */}
+              <div className="p-3 rounded-lg border">
+                <div className="flex items-start gap-3">
+                  <Download className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <p className="font-medium text-sm">Download</p>
+                      <p className="text-xs text-muted-foreground">
+                        Replace local data with cloud data.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDownload}
+                      disabled={syncStatus !== "idle"}
+                    >
+                      {syncStatus === "downloading" ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="mr-2 h-4 w-4" />
+                      )}
+                      Download
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <Button
