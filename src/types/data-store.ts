@@ -113,6 +113,13 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   defaultEventTiming: "1_day",
 };
 
+// Custom family created manually (not auto-detected)
+export interface CustomFamily {
+  id: string;
+  name: string;
+  colorIndex: number;
+}
+
 export interface AppSettings {
   theme: "light" | "dark" | "system";
   defaultView: "cards" | "graph";
@@ -123,6 +130,7 @@ export interface AppSettings {
   primaryUserId?: string; // ID of the "Me" person
   familyNames?: Record<string, string>; // Custom family names keyed by group root ID
   familyOverrides?: Record<string, string>; // Manual family assignments: personId -> familyGroupId
+  customFamilies?: CustomFamily[]; // Manually created families (not auto-detected)
   notifications?: NotificationSettings;
   themePreset?: ThemePreset;
   customTheme?: CustomTheme;

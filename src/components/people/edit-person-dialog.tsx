@@ -112,11 +112,15 @@ function EditPersonFormContent({
     clearFamilyOverride,
     hasFamilyOverride,
     renameFamilyGroup,
+    renameCustomFamily,
+    createCustomFamily,
   } = useFamilyGroups();
 
-  // Family name editing state
+  // Family editing state
   const [editingFamilyName, setEditingFamilyName] = useState(false);
   const [familyNameInput, setFamilyNameInput] = useState("");
+  const [creatingNewFamily, setCreatingNewFamily] = useState(false);
+  const [newFamilyName, setNewFamilyName] = useState("");
 
   // Form state initialized from person props
   const [firstName, setFirstName] = useState(person.firstName);
@@ -961,141 +965,225 @@ function EditPersonFormContent({
         <Separator />
 
         {/* Family Assignment */}
-        {familyGroups.length > 0 && (
-          <>
-            <div className="space-y-4">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                <Home className="h-4 w-4" />
-                Family
-              </h3>
+        <>
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <Home className="h-4 w-4" />
+              Family
+            </h3>
 
-              <div className="space-y-3">
-                {/* Current family info */}
-                <div className="p-3 rounded-lg border bg-muted/30">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      {editingFamilyName ? (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            value={familyNameInput}
-                            onChange={(e) => setFamilyNameInput(e.target.value)}
-                            placeholder="Family name..."
-                            className="h-8 text-sm"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                const currentFamily = getFamilyGroup(person.id);
-                                if (currentFamily && familyNameInput.trim()) {
+            <div className="space-y-3">
+              {/* Current family info */}
+              <div className="p-3 rounded-lg border bg-muted/30">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    {editingFamilyName ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={familyNameInput}
+                          onChange={(e) => setFamilyNameInput(e.target.value)}
+                          placeholder="Family name..."
+                          className="h-8 text-sm"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              const currentFamily = getFamilyGroup(person.id);
+                              if (currentFamily && familyNameInput.trim()) {
+                                // Use renameCustomFamily for custom families, renameFamilyGroup for auto-detected
+                                if (currentFamily.isCustom) {
+                                  renameCustomFamily(currentFamily.id, familyNameInput.trim());
+                                } else {
                                   renameFamilyGroup(currentFamily.id, familyNameInput.trim());
-                                  toast.success(`Family renamed to "${familyNameInput.trim()}"`);
                                 }
-                                setEditingFamilyName(false);
-                              } else if (e.key === "Escape") {
-                                setEditingFamilyName(false);
+                                toast.success(`Family renamed to "${familyNameInput.trim()}"`);
                               }
-                            }}
-                          />
+                              setEditingFamilyName(false);
+                            } else if (e.key === "Escape") {
+                              setEditingFamilyName(false);
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                          onClick={() => {
+                            const currentFamily = getFamilyGroup(person.id);
+                            if (currentFamily && familyNameInput.trim()) {
+                              if (currentFamily.isCustom) {
+                                renameCustomFamily(currentFamily.id, familyNameInput.trim());
+                              } else {
+                                renameFamilyGroup(currentFamily.id, familyNameInput.trim());
+                              }
+                              toast.success(`Family renamed to "${familyNameInput.trim()}"`);
+                            }
+                            setEditingFamilyName(false);
+                          }}
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium truncate">
+                          {getFamilyGroup(person.id)?.name || "No family assigned"}
+                        </p>
+                        {getFamilyGroup(person.id) && (
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 shrink-0"
+                            className="h-6 w-6 shrink-0"
                             onClick={() => {
                               const currentFamily = getFamilyGroup(person.id);
-                              if (currentFamily && familyNameInput.trim()) {
-                                renameFamilyGroup(currentFamily.id, familyNameInput.trim());
-                                toast.success(`Family renamed to "${familyNameInput.trim()}"`);
+                              if (currentFamily) {
+                                setFamilyNameInput(currentFamily.name);
+                                setEditingFamilyName(true);
                               }
-                              setEditingFamilyName(false);
                             }}
+                            aria-label="Rename this family"
+                            title="Rename this family (affects all members)"
                           >
-                            <Check className="h-4 w-4" />
+                            <Pencil className="h-3 w-3" />
                           </Button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium truncate">
-                            {getFamilyGroup(person.id)?.name || "No family assigned"}
-                          </p>
-                          {getFamilyGroup(person.id) && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 shrink-0"
-                              onClick={() => {
-                                const currentFamily = getFamilyGroup(person.id);
-                                if (currentFamily) {
-                                  setFamilyNameInput(currentFamily.name);
-                                  setEditingFamilyName(true);
-                                }
-                              }}
-                              aria-label="Edit family name"
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                      {!editingFamilyName && hasFamilyOverride(person.id) && (
-                        <p className="text-xs text-muted-foreground">
-                          Manually assigned (auto-detected: {getAutoDetectedFamily(person.id)?.name || "None"})
-                        </p>
-                      )}
-                    </div>
-                    {hasFamilyOverride(person.id) && !editingFamilyName && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          clearFamilyOverride(person.id);
-                          toast.success("Family reset to auto-detected");
-                        }}
-                        className="h-8 shrink-0"
-                      >
-                        <RotateCcw className="h-4 w-4 mr-1" />
-                        Reset
-                      </Button>
+                        )}
+                      </div>
+                    )}
+                    {!editingFamilyName && hasFamilyOverride(person.id) && (
+                      <p className="text-xs text-muted-foreground">
+                        Manually assigned (auto-detected: {getAutoDetectedFamily(person.id)?.name || "None"})
+                      </p>
+                    )}
+                    {!editingFamilyName && getFamilyGroup(person.id)?.isCustom && (
+                      <p className="text-xs text-muted-foreground">Custom family</p>
                     )}
                   </div>
+                  {hasFamilyOverride(person.id) && !editingFamilyName && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        clearFamilyOverride(person.id);
+                        toast.success("Family reset to auto-detected");
+                      }}
+                      className="h-8 shrink-0"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-1" />
+                      Reset
+                    </Button>
+                  )}
                 </div>
-
-                {/* Change family dropdown */}
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={getFamilyGroup(person.id)?.id || ""}
-                    onValueChange={(familyId) => {
-                      if (familyId) {
-                        setFamilyOverride(person.id, familyId);
-                        const family = familyGroups.find(f => f.id === familyId);
-                        toast.success(`Assigned to ${family?.name}`);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Change family..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {familyGroups.map((family) => (
-                        <SelectItem key={family.id} value={family.id}>
-                          {family.name} ({family.memberIds.size} members)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <p className="text-xs text-muted-foreground">
-                  Families are auto-detected from relationships. You can manually override if needed.
-                </p>
               </div>
-            </div>
 
-            <Separator />
-          </>
-        )}
+              {/* Change family or create new */}
+              {creatingNewFamily ? (
+                <div className="p-3 rounded-lg border bg-muted/30 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Create New Family</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => {
+                        setCreatingNewFamily(false);
+                        setNewFamilyName("");
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={newFamilyName}
+                      onChange={(e) => setNewFamilyName(e.target.value)}
+                      placeholder="e.g., Johnson Family"
+                      className="flex-1"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (newFamilyName.trim()) {
+                            createCustomFamily(newFamilyName.trim(), person.id);
+                            toast.success(`Created "${newFamilyName.trim()}" and assigned ${person.firstName}`);
+                            setCreatingNewFamily(false);
+                            setNewFamilyName("");
+                          }
+                        } else if (e.key === "Escape") {
+                          setCreatingNewFamily(false);
+                          setNewFamilyName("");
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => {
+                        if (newFamilyName.trim()) {
+                          createCustomFamily(newFamilyName.trim(), person.id);
+                          toast.success(`Created "${newFamilyName.trim()}" and assigned ${person.firstName}`);
+                          setCreatingNewFamily(false);
+                          setNewFamilyName("");
+                        }
+                      }}
+                      disabled={!newFamilyName.trim()}
+                    >
+                      Create
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    This will create a separate family for {person.firstName}.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  {familyGroups.length > 0 && (
+                    <Select
+                      value={getFamilyGroup(person.id)?.id || ""}
+                      onValueChange={(familyId) => {
+                        if (familyId) {
+                          setFamilyOverride(person.id, familyId);
+                          const family = familyGroups.find(f => f.id === familyId);
+                          toast.success(`Assigned to ${family?.name}`);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Assign to existing family..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {familyGroups.map((family) => (
+                          <SelectItem key={family.id} value={family.id}>
+                            {family.name} {family.isCustom ? "(custom)" : `(${family.memberIds.size} members)`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCreatingNewFamily(true)}
+                    className="shrink-0"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    New
+                  </Button>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                Families are auto-detected from relationships. Use "New" to create a separate family.
+              </p>
+            </div>
+          </div>
+
+          <Separator />
+        </>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button

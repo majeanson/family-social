@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useDataStore } from "@/stores/data-store";
-import type { Person, Relationship } from "@/types";
+import type { Person, Relationship, CustomFamily } from "@/types";
 import { DEFAULT_FAMILY_COLORS } from "@/types";
 
 export interface FamilyGroup {
@@ -10,6 +10,7 @@ export interface FamilyGroup {
   name: string;
   memberIds: Set<string>;
   colorIndex: number;
+  isCustom?: boolean; // true if manually created (not auto-detected)
 }
 
 // Family relationship types that connect family members
@@ -112,40 +113,62 @@ export function useFamilyGroups() {
     ? settings.familyColors
     : DEFAULT_FAMILY_COLORS;
 
-  // Get custom family names and overrides from settings
+  // Get custom family names, overrides, and custom families from settings
   const customFamilyNames = settings.familyNames || {};
   const familyOverrides = settings.familyOverrides || {};
+  const customFamiliesData = settings.customFamilies || [];
 
-  const familyGroups = useMemo(() => {
+  // Auto-detected family groups
+  const autoDetectedGroups = useMemo(() => {
     const groups = detectFamilyGroups(people, relationships);
     // Apply custom names from settings
     return groups.map(group => ({
       ...group,
       name: customFamilyNames[group.id] || group.name,
+      isCustom: false,
     }));
   }, [people, relationships, customFamilyNames]);
+
+  // Convert custom families to FamilyGroup format
+  const customFamilyGroups = useMemo((): FamilyGroup[] => {
+    return customFamiliesData.map(cf => ({
+      id: cf.id,
+      name: cf.name,
+      memberIds: new Set<string>(),
+      colorIndex: cf.colorIndex,
+      isCustom: true,
+    }));
+  }, [customFamiliesData]);
+
+  // Combined family groups (auto-detected + custom)
+  const familyGroups = useMemo(() => {
+    return [...autoDetectedGroups, ...customFamilyGroups];
+  }, [autoDetectedGroups, customFamilyGroups]);
+
+  // All families available for selection (includes custom families)
+  const allFamilies = familyGroups;
 
   // Map from person ID to their family group (with overrides applied)
   const personFamilyMap = useMemo(() => {
     const map = new Map<string, FamilyGroup>();
 
     // First, set auto-detected families
-    familyGroups.forEach(group => {
+    autoDetectedGroups.forEach(group => {
       group.memberIds.forEach(memberId => {
         map.set(memberId, group);
       });
     });
 
-    // Then apply manual overrides
+    // Then apply manual overrides (can point to auto-detected OR custom families)
     Object.entries(familyOverrides).forEach(([personId, targetFamilyId]) => {
-      const targetFamily = familyGroups.find(g => g.id === targetFamilyId);
+      const targetFamily = allFamilies.find(g => g.id === targetFamilyId);
       if (targetFamily) {
         map.set(personId, targetFamily);
       }
     });
 
     return map;
-  }, [familyGroups, familyOverrides]);
+  }, [autoDetectedGroups, allFamilies, familyOverrides]);
 
   // Get family color for a person
   const getFamilyColor = (personId: string) => {
@@ -190,7 +213,7 @@ export function useFamilyGroups() {
 
   // Get the auto-detected family (ignoring overrides)
   const getAutoDetectedFamily = (personId: string) => {
-    for (const group of familyGroups) {
+    for (const group of autoDetectedGroups) {
       if (group.memberIds.has(personId)) {
         return group;
       }
@@ -198,8 +221,67 @@ export function useFamilyGroups() {
     return null;
   };
 
+  // Create a new custom family and assign a person to it
+  const createCustomFamily = (name: string, personId: string) => {
+    const newId = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Assign color index based on total number of families
+    const colorIndex = familyGroups.length;
+
+    const newCustomFamily: CustomFamily = {
+      id: newId,
+      name: name.trim(),
+      colorIndex,
+    };
+
+    // Add to custom families list
+    const updatedCustomFamilies = [...customFamiliesData, newCustomFamily];
+
+    // Set the person's family override to this new family
+    const updatedOverrides = { ...familyOverrides, [personId]: newId };
+
+    updateSettings({
+      customFamilies: updatedCustomFamilies,
+      familyOverrides: updatedOverrides,
+    });
+
+    return newId;
+  };
+
+  // Delete a custom family
+  const deleteCustomFamily = (familyId: string) => {
+    // Remove the custom family
+    const updatedCustomFamilies = customFamiliesData.filter(cf => cf.id !== familyId);
+
+    // Remove any overrides pointing to this family
+    const updatedOverrides: Record<string, string> = {};
+    Object.entries(familyOverrides).forEach(([personId, targetFamilyId]) => {
+      if (targetFamilyId !== familyId) {
+        updatedOverrides[personId] = targetFamilyId;
+      }
+    });
+
+    // Remove custom name if any
+    const { [familyId]: _, ...restNames } = customFamilyNames;
+
+    updateSettings({
+      customFamilies: updatedCustomFamilies.length > 0 ? updatedCustomFamilies : undefined,
+      familyOverrides: Object.keys(updatedOverrides).length > 0 ? updatedOverrides : undefined,
+      familyNames: Object.keys(restNames).length > 0 ? restNames : undefined,
+    });
+  };
+
+  // Rename a custom family (updates the custom family name directly)
+  const renameCustomFamily = (familyId: string, newName: string) => {
+    const updatedCustomFamilies = customFamiliesData.map(cf =>
+      cf.id === familyId ? { ...cf, name: newName.trim() } : cf
+    );
+    updateSettings({ customFamilies: updatedCustomFamilies });
+  };
+
   return {
     familyGroups,
+    autoDetectedGroups,
+    customFamilyGroups,
     getFamilyColor,
     getFamilyGroup,
     getAutoDetectedFamily,
@@ -210,5 +292,8 @@ export function useFamilyGroups() {
     setFamilyOverride,
     clearFamilyOverride,
     hasFamilyOverride,
+    createCustomFamily,
+    deleteCustomFamily,
+    renameCustomFamily,
   };
 }
