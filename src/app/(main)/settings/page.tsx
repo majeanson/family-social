@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, useMemo } from "react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useDataStore } from "@/stores/data-store";
 import {
   downloadJSON,
@@ -64,6 +65,8 @@ import {
   Search,
   RefreshCw,
   Sparkles,
+  Link2,
+  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { AppSettings, FamilyColorConfig, RelationshipType, ReminderTiming, ThemePreset, CustomTheme, ThemeColors } from "@/types";
@@ -76,9 +79,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Settings sections for search
 const SETTINGS_SECTIONS = [
-  { id: "sync", tab: "sync", keywords: ["sync", "google", "drive", "cloud", "backup", "upload", "download"] },
+  { id: "sync", tab: "sync", keywords: ["sync", "google", "drive", "cloud", "backup", "upload", "download", "link", "share"] },
   { id: "data", tab: "sync", keywords: ["data", "summary", "storage", "people", "relationships"] },
-  { id: "import-export", tab: "sync", keywords: ["import", "export", "backup", "file", "json"] },
+  { id: "import-export", tab: "sync", keywords: ["import", "export", "backup", "file", "json", "link", "paste"] },
   { id: "profile", tab: "profile", keywords: ["me", "profile", "primary", "user", "myself"] },
   { id: "theme", tab: "appearance", keywords: ["theme", "dark", "light", "mode", "color", "appearance"] },
   { id: "display", tab: "appearance", keywords: ["display", "view", "sort", "cards", "graph"] },
@@ -107,6 +110,42 @@ export default function SettingsPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("sync");
+  const [importLink, setImportLink] = useState("");
+  const [importLoading, setImportLoading] = useState(false);
+  const router = useRouter();
+
+  // Handle manual link import
+  const handleImportLink = () => {
+    if (!importLink.trim()) {
+      toast.error("Please enter a share link");
+      return;
+    }
+
+    setImportLoading(true);
+
+    try {
+      // Extract the path from the URL
+      const url = new URL(importLink.trim());
+      const pathname = url.pathname + url.search;
+
+      // Check if it's a valid share or import link
+      if (pathname.startsWith("/share/") || pathname.startsWith("/import")) {
+        router.push(pathname);
+      } else {
+        toast.error("Invalid share link. Please use a valid Famolo share link.");
+        setImportLoading(false);
+      }
+    } catch {
+      // If it's not a valid URL, try to use it as a path
+      const trimmed = importLink.trim();
+      if (trimmed.startsWith("/share/") || trimmed.startsWith("/import")) {
+        router.push(trimmed);
+      } else {
+        toast.error("Invalid link format. Please paste the full share link.");
+        setImportLoading(false);
+      }
+    }
+  };
 
   // Auto-switch tab on search
   const handleSearch = (query: string) => {
@@ -286,6 +325,47 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
               <GoogleDriveSync />
+            </CardContent>
+          </Card>
+
+          {/* Manual Link Import */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Link2 className="h-5 w-5" />
+                Import from Share Link
+              </CardTitle>
+              <CardDescription>
+                Paste a share link to import data when deep linking doesn&apos;t work
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Paste share link here..."
+                  value={importLink}
+                  onChange={(e) => setImportLink(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleImportLink();
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleImportLink}
+                  disabled={importLoading || !importLink.trim()}
+                >
+                  {importLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Import"
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Use this when you receive a share link from someone but it doesn&apos;t open automatically in the app.
+              </p>
             </CardContent>
           </Card>
 
