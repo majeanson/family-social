@@ -118,57 +118,77 @@ export function useFamilyGroups() {
   const familyOverrides = settings.familyOverrides || {};
   const customFamiliesData = settings.customFamilies || [];
 
-  // Auto-detected family groups
-  const autoDetectedGroups = useMemo(() => {
-    const groups = detectFamilyGroups(people, relationships);
-    // Apply custom names from settings
-    return groups.map(group => ({
+  // Raw auto-detected family groups (before applying overrides)
+  const rawAutoDetectedGroups = useMemo(() => {
+    return detectFamilyGroups(people, relationships);
+  }, [people, relationships]);
+
+  // Build the combined family groups with correct memberIds (respecting overrides)
+  const { familyGroups, personFamilyMap } = useMemo(() => {
+    // Start with auto-detected groups, applying custom names
+    const autoGroups: FamilyGroup[] = rawAutoDetectedGroups.map(group => ({
       ...group,
       name: customFamilyNames[group.id] || group.name,
       isCustom: false,
+      memberIds: new Set(group.memberIds), // Clone to avoid mutation
     }));
-  }, [people, relationships, customFamilyNames]);
 
-  // Convert custom families to FamilyGroup format
-  const customFamilyGroups = useMemo((): FamilyGroup[] => {
-    return customFamiliesData.map(cf => ({
+    // Create custom family groups
+    const customGroups: FamilyGroup[] = customFamiliesData.map(cf => ({
       id: cf.id,
       name: cf.name,
       memberIds: new Set<string>(),
       colorIndex: cf.colorIndex,
       isCustom: true,
     }));
-  }, [customFamiliesData]);
 
-  // Combined family groups (auto-detected + custom)
-  const familyGroups = useMemo(() => {
-    return [...autoDetectedGroups, ...customFamilyGroups];
-  }, [autoDetectedGroups, customFamilyGroups]);
+    // All families combined
+    const allGroups = [...autoGroups, ...customGroups];
 
-  // All families available for selection (includes custom families)
-  const allFamilies = familyGroups;
+    // Build person -> family map and adjust memberIds based on overrides
+    const personMap = new Map<string, FamilyGroup>();
 
-  // Map from person ID to their family group (with overrides applied)
-  const personFamilyMap = useMemo(() => {
-    const map = new Map<string, FamilyGroup>();
-
-    // First, set auto-detected families
-    autoDetectedGroups.forEach(group => {
+    // First pass: assign people to their auto-detected families
+    autoGroups.forEach(group => {
       group.memberIds.forEach(memberId => {
-        map.set(memberId, group);
+        personMap.set(memberId, group);
       });
     });
 
-    // Then apply manual overrides (can point to auto-detected OR custom families)
+    // Second pass: apply overrides - move people to their overridden families
     Object.entries(familyOverrides).forEach(([personId, targetFamilyId]) => {
-      const targetFamily = allFamilies.find(g => g.id === targetFamilyId);
+      const targetFamily = allGroups.find(g => g.id === targetFamilyId);
       if (targetFamily) {
-        map.set(personId, targetFamily);
+        // Remove from current family's memberIds
+        const currentFamily = personMap.get(personId);
+        if (currentFamily && currentFamily.id !== targetFamilyId) {
+          currentFamily.memberIds.delete(personId);
+        }
+        // Add to target family's memberIds
+        targetFamily.memberIds.add(personId);
+        // Update the map
+        personMap.set(personId, targetFamily);
       }
     });
 
-    return map;
-  }, [autoDetectedGroups, allFamilies, familyOverrides]);
+    // Filter out auto-detected groups that now have 0 or 1 members (no longer a "family")
+    // But keep custom families even if empty (user created them intentionally)
+    const filteredGroups = allGroups.filter(g =>
+      g.isCustom || g.memberIds.size > 1
+    );
+
+    return { familyGroups: filteredGroups, personFamilyMap: personMap };
+  }, [rawAutoDetectedGroups, customFamilyNames, customFamiliesData, familyOverrides]);
+
+  // Auto-detected groups only (for getAutoDetectedFamily)
+  const autoDetectedGroups = useMemo(() => {
+    return familyGroups.filter(g => !g.isCustom);
+  }, [familyGroups]);
+
+  // Custom family groups only
+  const customFamilyGroups = useMemo(() => {
+    return familyGroups.filter(g => g.isCustom);
+  }, [familyGroups]);
 
   // Get family color for a person
   const getFamilyColor = (personId: string) => {
@@ -211,11 +231,16 @@ export function useFamilyGroups() {
     return personId in familyOverrides;
   };
 
-  // Get the auto-detected family (ignoring overrides)
+  // Get the auto-detected family (ignoring overrides) - uses raw groups before override adjustments
   const getAutoDetectedFamily = (personId: string) => {
-    for (const group of autoDetectedGroups) {
+    for (const group of rawAutoDetectedGroups) {
       if (group.memberIds.has(personId)) {
-        return group;
+        // Return with custom name applied if any
+        return {
+          ...group,
+          name: customFamilyNames[group.id] || group.name,
+          isCustom: false,
+        };
       }
     }
     return null;
