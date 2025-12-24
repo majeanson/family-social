@@ -20,7 +20,8 @@ const sizeClasses = {
   lg: "h-32 w-32",
 };
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const MAX_OUTPUT_SIZE = 500 * 1024; // 500KB max for stored image
+const MAX_DIMENSION = 800; // Max width/height
 
 export function PhotoUpload({
   value,
@@ -43,20 +44,15 @@ export function PhotoUpload({
         return;
       }
 
-      // Validate file size
-      if (file.size > MAX_FILE_SIZE) {
-        toast.error("Image must be less than 2MB");
-        return;
-      }
-
       setIsLoading(true);
 
       try {
-        // Resize and compress the image
-        const resizedDataUrl = await resizeImage(file, 400, 400, 0.8);
+        // Resize and compress the image (handles any file size)
+        const resizedDataUrl = await resizeAndCompressImage(file, MAX_DIMENSION, MAX_OUTPUT_SIZE);
         onChange(resizedDataUrl);
         toast.success("Photo uploaded");
-      } catch {
+      } catch (err) {
+        console.error("Image processing error:", err);
         toast.error("Failed to process image");
       } finally {
         setIsLoading(false);
@@ -136,63 +132,118 @@ export function PhotoUpload({
 }
 
 /**
- * Resize an image file to fit within max dimensions while maintaining aspect ratio
+ * Load an image from a File object
  */
-async function resizeImage(
-  file: File,
-  maxWidth: number,
-  maxHeight: number,
-  quality: number
-): Promise<string> {
+function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+    const reader = new FileReader();
 
-    img.onload = () => {
-      let { width, height } = img;
-
-      // Calculate new dimensions
-      if (width > height) {
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
-        }
-      } else {
-        if (height > maxHeight) {
-          width = (width * maxHeight) / height;
-          height = maxHeight;
-        }
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-
-      if (!ctx) {
-        reject(new Error("Could not get canvas context"));
-        return;
-      }
-
-      // Draw and export as WebP (smaller) or JPEG fallback
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // Try WebP first, fallback to JPEG
-      let dataUrl = canvas.toDataURL("image/webp", quality);
-      if (!dataUrl.startsWith("data:image/webp")) {
-        dataUrl = canvas.toDataURL("image/jpeg", quality);
-      }
-
-      resolve(dataUrl);
-    };
-
+    img.onload = () => resolve(img);
     img.onerror = () => reject(new Error("Failed to load image"));
 
-    // Load the image from file
-    const reader = new FileReader();
     reader.onload = (e) => {
       img.src = e.target?.result as string;
     };
     reader.onerror = () => reject(new Error("Failed to read file"));
     reader.readAsDataURL(file);
   });
+}
+
+/**
+ * Get the byte size of a data URL
+ */
+function getDataUrlSize(dataUrl: string): number {
+  // Remove the data URL prefix to get just the base64 data
+  const base64 = dataUrl.split(",")[1];
+  if (!base64) return 0;
+  // Base64 encodes 3 bytes into 4 characters
+  return Math.ceil((base64.length * 3) / 4);
+}
+
+/**
+ * Resize and compress an image to fit within size limits
+ * Progressively reduces quality if needed to meet size target
+ */
+async function resizeAndCompressImage(
+  file: File,
+  maxDimension: number,
+  maxBytes: number
+): Promise<string> {
+  const img = await loadImage(file);
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) {
+    throw new Error("Could not get canvas context");
+  }
+
+  let { width, height } = img;
+
+  // Calculate new dimensions maintaining aspect ratio
+  if (width > height) {
+    if (width > maxDimension) {
+      height = Math.round((height * maxDimension) / width);
+      width = maxDimension;
+    }
+  } else {
+    if (height > maxDimension) {
+      width = Math.round((width * maxDimension) / height);
+      height = maxDimension;
+    }
+  }
+
+  canvas.width = width;
+  canvas.height = height;
+  ctx.drawImage(img, 0, 0, width, height);
+
+  // Try WebP first (better compression), fallback to JPEG
+  const formats = ["image/webp", "image/jpeg"];
+
+  for (const format of formats) {
+    // Start with high quality and reduce if needed
+    for (let quality = 0.9; quality >= 0.3; quality -= 0.1) {
+      const dataUrl = canvas.toDataURL(format, quality);
+
+      // Check if format is supported (some browsers don't support WebP)
+      if (format === "image/webp" && !dataUrl.startsWith("data:image/webp")) {
+        break; // Try next format
+      }
+
+      const size = getDataUrlSize(dataUrl);
+      if (size <= maxBytes) {
+        return dataUrl;
+      }
+    }
+  }
+
+  // If still too large, reduce dimensions and try again
+  const smallerDimension = Math.round(maxDimension * 0.5);
+  if (smallerDimension >= 200) {
+    // Resize smaller
+    let newWidth = width;
+    let newHeight = height;
+
+    if (newWidth > newHeight) {
+      if (newWidth > smallerDimension) {
+        newHeight = Math.round((newHeight * smallerDimension) / newWidth);
+        newWidth = smallerDimension;
+      }
+    } else {
+      if (newHeight > smallerDimension) {
+        newWidth = Math.round((newWidth * smallerDimension) / newHeight);
+        newHeight = smallerDimension;
+      }
+    }
+
+    canvas.width = newWidth;
+    canvas.height = newHeight;
+    ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+    return dataUrl;
+  }
+
+  // Last resort: return lowest quality JPEG
+  return canvas.toDataURL("image/jpeg", 0.5);
 }
