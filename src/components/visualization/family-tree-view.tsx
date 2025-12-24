@@ -266,23 +266,26 @@ export function FamilyTreeView() {
     setLastTouchDistance(0);
   }, []);
 
+  // Center on a specific person - similar to handleCenterView but offset by person position
+  const centerOnPerson = useCallback((personId: string) => {
+    const pos = nodePositions.get(personId);
+    if (!pos) return;
+
+    // Simply negate the position to center on that person
+    // pos.x/y are relative to content center, so -pos.x brings that point to center
+    setPan({
+      x: -pos.x,
+      y: -pos.y + 50, // Slight offset to show person in upper-center area
+    });
+    setZoom(1);
+  }, [nodePositions]);
+
   // Center view on initial load or when focus changes
-  // Note: We intentionally exclude zoom from deps to prevent re-centering on zoom change
   useEffect(() => {
-    if (focusPersonId && nodePositions.has(focusPersonId)) {
-      const pos = nodePositions.get(focusPersonId)!;
-      // Center the focused person
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        // Use zoom=1 for initial centering to avoid feedback loop
-        setPan({
-          x: rect.width / 2 - pos.x,
-          y: rect.height / 3 - pos.y,
-        });
-        setZoom(1); // Reset zoom when focus changes
-      }
+    if (focusPersonId) {
+      centerOnPerson(focusPersonId);
     }
-  }, [focusPersonId, nodePositions]);
+  }, [focusPersonId, centerOnPerson]);
 
   if (!layout || people.length === 0) {
     return (
