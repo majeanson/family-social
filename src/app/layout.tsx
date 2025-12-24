@@ -14,12 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Family Social",
+  title: "Famolo",
   description: "Visualize and manage your family and friend relationships",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Family Social",
+    title: "Famolo",
   },
   formatDetection: {
     telephone: false,

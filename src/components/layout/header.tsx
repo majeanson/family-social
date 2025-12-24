@@ -34,11 +34,11 @@ export function Header() {
       >
         Skip to main content
       </a>
-      <div className="container flex h-14 items-center justify-between">
+      <div className="container flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo and Desktop Nav */}
         <div className="flex items-center">
           <Link href="/" className="flex items-center space-x-2">
-            <span className="font-bold text-lg">Family Social</span>
+            <span className="font-bold text-lg">Famolo</span>
           </Link>
           <nav className="hidden items-center ml-8 space-x-6 text-sm font-medium md:flex">
             {navigation.map((item) => (

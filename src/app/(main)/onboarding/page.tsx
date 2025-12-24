@@ -69,7 +69,7 @@ export default function OnboardingPage() {
             <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
               <Crown className="h-8 w-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl">Welcome to Family Social</CardTitle>
+            <CardTitle className="text-2xl">Welcome to Famolo</CardTitle>
             <CardDescription className="text-base">
               Let&apos;s set up your profile so relationships can be viewed from your perspective.
             </CardDescription>

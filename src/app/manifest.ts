@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Family Social",
-    short_name: "Family",
+    name: "Famolo",
+    short_name: "Famolo",
     description: "Visualize and manage your family and friend relationships",
     start_url: "/",
     display: "standalone",

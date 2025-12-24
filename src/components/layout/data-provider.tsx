@@ -131,7 +131,7 @@ export function DataProvider({ children }: DataProviderProps) {
       <Dialog open={showSetup} onOpenChange={setShowSetup}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Welcome to Family Social</DialogTitle>
+            <DialogTitle>Welcome to Famolo</DialogTitle>
             <DialogDescription>
               Choose how you want to store your family data. You can always
               export your data later.

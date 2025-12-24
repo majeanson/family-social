@@ -1,4 +1,4 @@
-import { Header, DataProvider, ThemeProvider } from "@/components/layout";
+import { Header, DataProvider, ThemeProvider, InstallPrompt } from "@/components/layout";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 export default function MainLayout({
@@ -17,6 +17,7 @@ export default function MainLayout({
             </ErrorBoundary>
           </main>
         </div>
+        <InstallPrompt />
       </ThemeProvider>
     </DataProvider>
   );
