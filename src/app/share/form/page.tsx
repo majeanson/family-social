@@ -39,10 +39,22 @@ import {
 function ShareFormContent() {
   const searchParams = useSearchParams();
   const data = searchParams.get("data");
-  const template = data ? decodeFormTemplate(data) : null;
+  const decoded = data ? decodeFormTemplate(data) : null;
+  const template = decoded?.template || null;
+  const prefill = decoded?.prefill;
 
   const [step, setStep] = useState<"form" | "creating" | "done">("form");
-  const [formData, setFormData] = useState<Record<string, string>>({});
+  // Initialize form data with prefill values if available
+  const [formData, setFormData] = useState<Record<string, string>>(() => {
+    if (prefill) {
+      const initial: Record<string, string> = {};
+      for (const [key, value] of Object.entries(prefill)) {
+        if (value) initial[key] = value;
+      }
+      return initial;
+    }
+    return {};
+  });
   const [expiry, setExpiry] = useState("24h");
   const [shareLink, setShareLink] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
@@ -277,8 +289,9 @@ function ShareFormContent() {
           <div className="flex items-start gap-3">
             <LinkIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
             <p className="text-sm text-blue-800 dark:text-blue-200">
-              Fill out the form below. We&apos;ll create a temporary link you can share.
-              The recipient can add your info with one click.
+              {prefill
+                ? "Review and complete the information below. Some fields are pre-filled for you."
+                : "Fill out the form below. We'll create a temporary link you can share. The recipient can add your info with one click."}
             </p>
           </div>
         </div>

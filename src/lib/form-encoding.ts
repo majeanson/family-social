@@ -33,9 +33,28 @@ function fromUrlSafe(urlSafe: string): string {
   return base64;
 }
 
-// Encode form template to a URL-safe string
-export function encodeFormTemplate(template: FormTemplate): string {
-  const minified = {
+// Pre-filled data for form fields
+export interface FormPrefillData {
+  firstName?: string;
+  lastName?: string;
+  nickname?: string;
+  email?: string;
+  phone?: string;
+  birthday?: string;
+  photo?: string;
+  notes?: string;
+  address?: string;
+  [key: string]: string | undefined;
+}
+
+// Encode form template to a URL-safe string (with optional prefill data)
+export function encodeFormTemplate(template: FormTemplate, prefill?: FormPrefillData): string {
+  const minified: {
+    n: string;
+    d: string;
+    f: { k: string; l: string; r: number; t: string }[];
+    p?: Record<string, string>;
+  } = {
     n: template.name,
     d: template.description || "",
     f: template.fields.map((f) => ({
@@ -45,12 +64,30 @@ export function encodeFormTemplate(template: FormTemplate): string {
       t: f.type,
     })),
   };
+
+  // Add prefill data if provided (only include non-empty values)
+  if (prefill) {
+    const prefillData: Record<string, string> = {};
+    for (const [key, value] of Object.entries(prefill)) {
+      if (value) prefillData[key] = value;
+    }
+    if (Object.keys(prefillData).length > 0) {
+      minified.p = prefillData;
+    }
+  }
+
   const json = JSON.stringify(minified);
   return toUrlSafe(toBase64(json));
 }
 
+// Result of decoding a form template (includes optional prefill data)
+export interface DecodedFormTemplate {
+  template: FormTemplate;
+  prefill?: FormPrefillData;
+}
+
 // Decode form template from URL-safe string
-export function decodeFormTemplate(encoded: string): FormTemplate | null {
+export function decodeFormTemplate(encoded: string): DecodedFormTemplate | null {
   try {
     // Handle legacy formats with version prefix
     let toDecode = encoded;
@@ -75,7 +112,7 @@ export function decodeFormTemplate(encoded: string): FormTemplate | null {
 
     const minified = JSON.parse(json);
 
-    return {
+    const template: FormTemplate = {
       id: "shared",
       name: minified.n,
       description: minified.d,
@@ -90,15 +127,20 @@ export function decodeFormTemplate(encoded: string): FormTemplate | null {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    return {
+      template,
+      prefill: minified.p as FormPrefillData | undefined,
+    };
   } catch (error) {
     console.error("Failed to decode form template:", error);
     return null;
   }
 }
 
-// Generate a shareable URL for a form
-export function generateShareableUrl(template: FormTemplate, baseUrl?: string): string {
-  const encoded = encodeFormTemplate(template);
+// Generate a shareable URL for a form (with optional prefill data)
+export function generateShareableUrl(template: FormTemplate, baseUrl?: string, prefill?: FormPrefillData): string {
+  const encoded = encodeFormTemplate(template, prefill);
   const base = baseUrl || (typeof window !== "undefined" ? window.location.origin : "");
   return `${base}/share/form?data=${encoded}`;
 }
