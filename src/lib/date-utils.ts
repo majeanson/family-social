@@ -7,6 +7,7 @@ export interface BirthdayInfo {
   shortDisplay: string;
   age: number;
   ageDisplay: string; // Formatted age (e.g., "2 years old", "6 months old", "3 weeks old")
+  upcomingAgeDisplay: string; // Age they will be on next birthday (e.g., "Turning 3 in 6 days")
   daysUntil: number;
   isToday: boolean;
   isUpcoming: boolean; // Within 30 days
@@ -96,6 +97,18 @@ export function getBirthdayInfo(birthday: string | undefined): BirthdayInfo | nu
     const daysUntil = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     const isToday = daysUntil === 0 || (today.getMonth() === date.getMonth() && today.getDate() === date.getDate());
 
+    // Calculate the age they will be on their next birthday
+    const upcomingAge = nextBirthday.getFullYear() - date.getFullYear();
+    let upcomingAgeDisplay = ageDisplay;
+
+    if (isToday) {
+      upcomingAgeDisplay = `Turning ${upcomingAge} today!`;
+    } else if (daysUntil === 1) {
+      upcomingAgeDisplay = `Turning ${upcomingAge} tomorrow`;
+    } else if (daysUntil <= 30) {
+      upcomingAgeDisplay = `Turning ${upcomingAge} in ${daysUntil} days`;
+    }
+
     return {
       display: date.toLocaleDateString("en-US", {
         month: "long",
@@ -108,6 +121,7 @@ export function getBirthdayInfo(birthday: string | undefined): BirthdayInfo | nu
       }),
       age,
       ageDisplay,
+      upcomingAgeDisplay,
       daysUntil: isToday ? 0 : daysUntil,
       isToday,
       isUpcoming: daysUntil <= 30 && daysUntil > 0,
