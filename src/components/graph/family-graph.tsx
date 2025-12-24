@@ -578,12 +578,19 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={{
+            padding: 0.3,
+            includeHiddenNodes: false,
+            minZoom: 0.5,
+            maxZoom: 1.5,
+          }}
           minZoom={0.1}
           maxZoom={2}
+          nodeOrigin={[0.5, 0.5]}
           defaultEdgeOptions={{
             type: "smoothstep",
           }}
+          proOptions={{ hideAttribution: true }}
         >
           <Background color={bgGridColor} gap={20} />
           <Controls position="bottom-right" />
