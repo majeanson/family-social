@@ -182,25 +182,25 @@ export function PeopleView() {
             {people.length} {people.length === 1 ? "person" : "people"} in your network
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {!selectMode ? (
             <>
-              <Button variant="outline" onClick={() => setSelectMode(true)} className="w-full sm:w-auto">
+              <Button variant="outline" onClick={() => setSelectMode(true)} size="sm" className="flex-1 sm:flex-none">
                 <CheckSquare className="mr-2 h-4 w-4" aria-hidden="true" />
                 Select
               </Button>
-              <Button onClick={() => setShowQuickAdd(true)} className="w-full sm:w-auto">
+              <Button onClick={() => setShowQuickAdd(true)} size="sm" className="flex-1 sm:flex-none">
                 <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
                 Add Person
               </Button>
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={exitSelectMode} className="w-full sm:w-auto">
+              <Button variant="outline" onClick={exitSelectMode} size="sm" className="flex-1 sm:flex-none">
                 <X className="mr-2 h-4 w-4" aria-hidden="true" />
                 Cancel
               </Button>
-              <Button onClick={() => setShowShareDialog(true)} disabled={selectedPeopleIds.length === 0} className="w-full sm:w-auto">
+              <Button onClick={() => setShowShareDialog(true)} disabled={selectedPeopleIds.length === 0} size="sm" className="flex-1 sm:flex-none">
                 <Share2 className="mr-2 h-4 w-4" aria-hidden="true" />
                 Share {selectedPeopleIds.length > 0 && `(${selectedPeopleIds.length})`}
               </Button>

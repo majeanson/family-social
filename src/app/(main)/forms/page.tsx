@@ -119,7 +119,7 @@ export default function FormsPage() {
             Create shareable forms to collect family member information
           </p>
         </div>
-        <Button onClick={() => setShowCreate(true)} size="lg">
+        <Button onClick={() => setShowCreate(true)} size="sm" className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Create Form
         </Button>
