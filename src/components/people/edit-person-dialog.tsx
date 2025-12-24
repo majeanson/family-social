@@ -35,7 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { X, Plus, Trash2, Users } from "lucide-react";
+import { X, Plus, Trash2, Users, UserPlus } from "lucide-react";
 import { isValidEmail, isValidBirthday, isValidPhone } from "@/lib/utils";
 import type { Person } from "@/types";
 import { RelationshipSelector } from "@/components/relationships";
@@ -94,6 +94,7 @@ function EditPersonFormContent({
   const {
     updatePerson,
     deletePerson,
+    addPerson,
     people,
     relationships,
     addRelationship,
@@ -122,6 +123,12 @@ function EditPersonFormContent({
   // Relationship state
   const [newRelationshipPersonId, setNewRelationshipPersonId] = useState("");
   const [newRelationshipType, setNewRelationshipType] = useState<RelationshipType>("friend");
+
+  // Add new person with relationship state
+  const [showAddNewPerson, setShowAddNewPerson] = useState(false);
+  const [newPersonRelationType, setNewPersonRelationType] = useState<RelationshipType>("child");
+  const [newPersonFirstName, setNewPersonFirstName] = useState("");
+  const [newPersonLastName, setNewPersonLastName] = useState("");
 
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -367,6 +374,79 @@ function EditPersonFormContent({
     setPendingPropagation(null);
     setSelectedPropagations(new Set());
   }, [pendingPropagation]);
+
+  // Handle creating a new person with relationship
+  const handleAddNewPersonWithRelationship = useCallback(() => {
+    if (!newPersonFirstName.trim()) {
+      toast.error("First name is required");
+      return;
+    }
+
+    // Create the new person
+    const newPersonId = addPerson({
+      firstName: newPersonFirstName.trim(),
+      lastName: newPersonLastName.trim(),
+      tags: [],
+      customFields: [],
+    });
+
+    const newPersonFullName = `${newPersonFirstName.trim()}${newPersonLastName.trim() ? ` ${newPersonLastName.trim()}` : ""}`;
+
+    // Add the relationship
+    addRelationship(person.id, newPersonId, newPersonRelationType);
+
+    // Check for propagation options
+    const propagationOptions: PropagationOption[] = [];
+
+    // Check for spouse/partner propagation
+    if (SPOUSE_PROPAGATABLE_TYPES.includes(newPersonRelationType)) {
+      const spouse = getSpouseOrPartner();
+      if (spouse && !relationshipExists(spouse.id, newPersonId)) {
+        const spouseRel = personRelationships.find((r) => {
+          const type = r.personAId === person.id ? r.type : r.reverseType || r.type;
+          return type === "spouse" || type === "partner";
+        });
+        const relType = spouseRel?.type === "spouse" || spouseRel?.reverseType === "spouse" ? "spouse" : "partner";
+        propagationOptions.push({
+          personId: spouse.id,
+          personName: `${spouse.firstName}${spouse.lastName ? ` ${spouse.lastName}` : ""}`,
+          relationshipType: relType as "spouse" | "partner",
+        });
+      }
+    }
+
+    // Check for sibling propagation
+    if (SIBLING_PROPAGATABLE_TYPES.includes(newPersonRelationType)) {
+      const siblings = getSiblings();
+      for (const sibling of siblings) {
+        if (!relationshipExists(sibling.id, newPersonId)) {
+          propagationOptions.push({
+            personId: sibling.id,
+            personName: `${sibling.firstName}${sibling.lastName ? ` ${sibling.lastName}` : ""}`,
+            relationshipType: "sibling",
+          });
+        }
+      }
+    }
+
+    // Reset the add new person form
+    setShowAddNewPerson(false);
+    setNewPersonFirstName("");
+    setNewPersonLastName("");
+
+    // If there are propagation options, show the dialog
+    if (propagationOptions.length > 0) {
+      setPendingPropagation({
+        targetPersonId: newPersonId,
+        targetPersonName: newPersonFullName,
+        relationshipType: newPersonRelationType,
+        propagationOptions,
+      });
+      setSelectedPropagations(new Set(propagationOptions.map((o) => o.personId)));
+    } else {
+      toast.success(`Added ${newPersonFullName} as ${RELATIONSHIP_CONFIG[newPersonRelationType].label}`);
+    }
+  }, [newPersonFirstName, newPersonLastName, newPersonRelationType, person.id, addPerson, addRelationship, getSpouseOrPartner, getSiblings, relationshipExists, personRelationships]);
 
   const handleDeleteRelationship = useCallback((relationshipId: string) => {
     deleteRelationship(relationshipId);
@@ -699,10 +779,99 @@ function EditPersonFormContent({
             </div>
           )}
 
-          {availablePeople.length === 0 && personRelationships.length === 0 && (
+          {availablePeople.length === 0 && personRelationships.length === 0 && !showAddNewPerson && (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Add more people to create relationships
+              No relationships yet. Add a new person below.
             </p>
+          )}
+
+          {/* Add new person with relationship */}
+          {!showAddNewPerson ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowAddNewPerson(true)}
+              className="w-full"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add New Person as...
+            </Button>
+          ) : (
+            <div className="p-4 rounded-lg border bg-muted/30 space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Add New Person
+                </h4>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => {
+                    setShowAddNewPerson(false);
+                    setNewPersonFirstName("");
+                    setNewPersonLastName("");
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs">Relationship Type</Label>
+                <RelationshipSelector
+                  value={newPersonRelationType}
+                  onValueChange={setNewPersonRelationType}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="newPersonFirstName" className="text-xs">
+                    First Name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="newPersonFirstName"
+                    value={newPersonFirstName}
+                    onChange={(e) => setNewPersonFirstName(e.target.value)}
+                    placeholder="First name"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddNewPersonWithRelationship();
+                      }
+                    }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="newPersonLastName" className="text-xs">Last Name</Label>
+                  <Input
+                    id="newPersonLastName"
+                    value={newPersonLastName}
+                    onChange={(e) => setNewPersonLastName(e.target.value)}
+                    placeholder="Last name"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddNewPersonWithRelationship();
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                onClick={handleAddNewPersonWithRelationship}
+                disabled={!newPersonFirstName.trim()}
+                className="w-full"
+                size="sm"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add {RELATIONSHIP_CONFIG[newPersonRelationType].label}
+              </Button>
+            </div>
           )}
         </div>
 
