@@ -3,12 +3,14 @@
 import { useMemo, useEffect, useState, useCallback, createContext, useContext } from "react";
 import {
   ReactFlow,
+  ReactFlowProvider,
   Node,
   Edge,
   Controls,
   Background,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   MarkerType,
   Position,
   Handle,
@@ -553,13 +555,21 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialLayout.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialLayout.edges);
+  const { fitView } = useReactFlow();
 
   // Update layout when data changes
   useEffect(() => {
     const layout = calculateLayout(people, relationships, familyGroups, selectedFamilyId, primaryUserId, relationshipColors, layoutType);
     setNodes(layout.nodes);
     setEdges(layout.edges);
-  }, [people, relationships, familyGroups, selectedFamilyId, primaryUserId, relationshipColors, layoutType, setNodes, setEdges]);
+
+    // Fit view after a short delay to allow nodes to render
+    const timer = setTimeout(() => {
+      fitView({ padding: 0.2, duration: 200 });
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [people, relationships, familyGroups, selectedFamilyId, primaryUserId, relationshipColors, layoutType, setNodes, setEdges, fitView]);
 
   if (people.length === 0) {
     return (
@@ -568,6 +578,13 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }
       </div>
     );
   }
+
+  const handleInit = useCallback(() => {
+    // Fit view on initial render after nodes have their dimensions
+    setTimeout(() => {
+      fitView({ padding: 0.2, duration: 200 });
+    }, 100);
+  }, [fitView]);
 
   return (
     <ColorsContext.Provider value={colors}>
@@ -578,6 +595,7 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
+          onInit={handleInit}
           fitView
           fitViewOptions={{
             padding: 0.2,
@@ -634,11 +652,13 @@ export function FamilyGraph({
   }
 
   return (
-    <FamilyGraphInner
-      selectedFamilyId={selectedFamilyId}
-      onFamilyGroupsChange={handleFamilyGroupsChange}
-      layoutType={layoutType}
-    />
+    <ReactFlowProvider>
+      <FamilyGraphInner
+        selectedFamilyId={selectedFamilyId}
+        onFamilyGroupsChange={handleFamilyGroupsChange}
+        layoutType={layoutType}
+      />
+    </ReactFlowProvider>
   );
 }
 

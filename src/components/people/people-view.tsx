@@ -446,9 +446,9 @@ export function PeopleView() {
 
           {/* Grid */}
           {filteredPeople.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-fr">
               {filteredPeople.map((person) => (
-                <div key={person.id} className="relative">
+                <div key={person.id} className="relative h-full">
                   {selectMode && (
                     <button
                       type="button"
