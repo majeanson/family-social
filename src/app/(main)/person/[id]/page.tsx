@@ -330,11 +330,14 @@ export default function PersonProfilePage({ params }: PageProps) {
                     <p className="text-sm text-muted-foreground">
                       Missing: {missingInfo.join(", ")}
                     </p>
-                    <Button variant="link" size="sm" className="h-auto p-0 text-primary" asChild>
-                      <Link href="/forms">
-                        <Send className="h-3 w-3 mr-1" />
-                        Create a form to request this info
-                      </Link>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-primary"
+                      onClick={() => setShowEditDialog(true)}
+                    >
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Complete this info
                     </Button>
                   </div>
                 </div>

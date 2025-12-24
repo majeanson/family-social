@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useDataStore } from "@/stores/data-store";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { X, Plus, Trash2, Users, UserPlus } from "lucide-react";
+import { X, Plus, Trash2, Users, UserPlus, MapPin } from "lucide-react";
 import { isValidEmail, isValidBirthday, isValidPhone } from "@/lib/utils";
 import type { Person } from "@/types";
 import { RelationshipSelector } from "@/components/relationships";
@@ -91,6 +92,7 @@ function EditPersonFormContent({
   person: Person;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const {
     updatePerson,
     deletePerson,
@@ -137,6 +139,9 @@ function EditPersonFormContent({
   const [pendingPropagation, setPendingPropagation] = useState<PendingPropagation | null>(null);
   const [selectedPropagations, setSelectedPropagations] = useState<Set<string>>(new Set());
 
+  // Address copy state (for children)
+  const [pendingAddressCopy, setPendingAddressCopy] = useState<{ childId: string; childName: string } | null>(null);
+
   // Get person's relationships
   const personRelationships = relationships.filter(
     (r) => r.personAId === person.id || r.personBId === person.id
@@ -163,6 +168,20 @@ function EditPersonFormContent({
       .map((r) => {
         const siblingId = r.personAId === person.id ? r.personBId : r.personAId;
         return people.find((p) => p.id === siblingId);
+      })
+      .filter((p): p is Person => p !== undefined);
+  }, [personRelationships, person.id, people]);
+
+  // Find children of the person being edited (for auto-sibling creation)
+  const getChildren = useCallback((): Person[] => {
+    return personRelationships
+      .filter((r) => {
+        const type = r.personAId === person.id ? r.type : r.reverseType || r.type;
+        return type === "child";
+      })
+      .map((r) => {
+        const childId = r.personAId === person.id ? r.personBId : r.personAId;
+        return people.find((p) => p.id === childId);
       })
       .filter((p): p is Person => p !== undefined);
   }, [personRelationships, person.id, people]);
@@ -318,6 +337,17 @@ function EditPersonFormContent({
       }
     }
 
+    // When adding a child, automatically add sibling relationships with existing children
+    if (newRelationshipType === "child") {
+      const existingChildren = getChildren();
+      for (const existingChild of existingChildren) {
+        if (existingChild.id !== newRelationshipPersonId && !relationshipExists(existingChild.id, newRelationshipPersonId)) {
+          // Auto-add sibling relationship between children
+          addRelationship(existingChild.id, newRelationshipPersonId, "sibling");
+        }
+      }
+    }
+
     // Add the primary relationship
     addRelationship(person.id, newRelationshipPersonId, newRelationshipType);
 
@@ -336,7 +366,7 @@ function EditPersonFormContent({
     }
 
     setNewRelationshipPersonId("");
-  }, [person.id, newRelationshipPersonId, newRelationshipType, personRelationships, addRelationship, people, getSpouseOrPartner, getSiblings, relationshipExists]);
+  }, [person.id, newRelationshipPersonId, newRelationshipType, personRelationships, addRelationship, people, getSpouseOrPartner, getSiblings, getChildren, relationshipExists]);
 
   // Handle confirming propagation
   const handleConfirmPropagation = useCallback(() => {
@@ -429,6 +459,17 @@ function EditPersonFormContent({
       }
     }
 
+    // When adding a new person as a child, automatically add sibling relationships with existing children
+    if (newPersonRelationType === "child") {
+      const existingChildren = getChildren();
+      for (const existingChild of existingChildren) {
+        if (!relationshipExists(existingChild.id, newPersonId)) {
+          // Auto-add sibling relationship between children
+          addRelationship(existingChild.id, newPersonId, "sibling");
+        }
+      }
+    }
+
     // Reset the add new person form
     setShowAddNewPerson(false);
     setNewPersonFirstName("");
@@ -446,12 +487,35 @@ function EditPersonFormContent({
     } else {
       toast.success(`Added ${newPersonFullName} as ${RELATIONSHIP_CONFIG[newPersonRelationType].label}`);
     }
-  }, [newPersonFirstName, newPersonLastName, newPersonRelationType, person.id, addPerson, addRelationship, getSpouseOrPartner, getSiblings, relationshipExists, personRelationships]);
+
+    // If adding a child and parent has address, offer to copy it
+    if (newPersonRelationType === "child" && person.address && (person.address.street || person.address.city)) {
+      setPendingAddressCopy({ childId: newPersonId, childName: newPersonFullName });
+    }
+  }, [newPersonFirstName, newPersonLastName, newPersonRelationType, person.id, person.address, addPerson, addRelationship, getSpouseOrPartner, getSiblings, getChildren, relationshipExists, personRelationships]);
 
   const handleDeleteRelationship = useCallback((relationshipId: string) => {
     deleteRelationship(relationshipId);
     toast.success("Relationship removed");
   }, [deleteRelationship]);
+
+  // Navigate to a person's profile
+  const handleNavigateToPerson = useCallback((personId: string) => {
+    onClose();
+    router.push(`/person/${personId}`);
+  }, [onClose, router]);
+
+  // Copy address to child
+  const handleCopyAddressToChild = useCallback(() => {
+    if (!pendingAddressCopy || !person.address) return;
+    updatePerson(pendingAddressCopy.childId, { address: { ...person.address } });
+    toast.success(`Address copied to ${pendingAddressCopy.childName}`);
+    setPendingAddressCopy(null);
+  }, [pendingAddressCopy, person.address, updatePerson]);
+
+  const handleSkipAddressCopy = useCallback(() => {
+    setPendingAddressCopy(null);
+  }, []);
 
   // Get available people for new relationship (excluding self and already connected)
   const availablePeople = useMemo(() => people.filter((p) => {
@@ -714,19 +778,23 @@ function EditPersonFormContent({
                     key={rel.id}
                     className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
                   >
-                    <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleNavigateToPerson(relatedPerson.id)}
+                      className="flex items-center gap-3 flex-1 text-left hover:opacity-70 transition-opacity"
+                    >
                       <span
                         className={`h-3 w-3 rounded-full ${config?.color || "bg-gray-400"}`}
                       />
                       <div>
-                        <span className="font-medium">
+                        <span className="font-medium hover:underline">
                           {relatedPerson.firstName} {relatedPerson.lastName}
                         </span>
                         <span className="text-muted-foreground ml-2">
                           ({config?.label || relationType})
                         </span>
                       </div>
-                    </div>
+                    </button>
                     <Button
                       type="button"
                       variant="ghost"
@@ -968,6 +1036,44 @@ function EditPersonFormContent({
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmPropagation}>
               Add for Selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Address Copy Dialog (for children) */}
+      <AlertDialog open={!!pendingAddressCopy} onOpenChange={(open) => !open && handleSkipAddressCopy()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Copy address to child?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Would you like to copy your address to <strong>{pendingAddressCopy?.childName}</strong>?
+                </p>
+                {person.address && (
+                  <div className="p-3 rounded-lg border bg-muted/30 text-sm">
+                    {person.address.street && <p>{person.address.street}</p>}
+                    <p>
+                      {[person.address.city, person.address.state, person.address.postalCode]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                    {person.address.country && <p>{person.address.country}</p>}
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleSkipAddressCopy}>
+              Skip
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleCopyAddressToChild}>
+              Copy Address
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

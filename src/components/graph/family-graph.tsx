@@ -52,7 +52,7 @@ function PersonNode({ data }: NodeProps) {
     <div
       className={`
         px-4 py-3 rounded-xl border-2 shadow-lg cursor-pointer transition-all
-        hover:shadow-xl hover:scale-105
+        hover:shadow-xl hover:scale-105 min-w-[140px]
         ${isMe
           ? "bg-amber-50 border-amber-400 dark:bg-amber-950/50 dark:border-amber-600 ring-2 ring-amber-300 ring-offset-2"
           : familyColor
