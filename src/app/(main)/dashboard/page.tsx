@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getInitials } from "@/lib/utils";
-import { Crown, Users, Network, ArrowRight } from "lucide-react";
+import { Crown, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export default function DashboardPage() {
@@ -22,29 +22,11 @@ export default function DashboardPage() {
       <ReminderToasts />
 
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Your family overview at a glance
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/graph">
-              <Network className="h-4 w-4 sm:mr-2" aria-hidden="true" />
-              <span className="hidden sm:inline">View Graph</span>
-              <span className="sr-only sm:hidden">View Graph</span>
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/">
-              <Users className="h-4 w-4 sm:mr-2" aria-hidden="true" />
-              <span className="hidden sm:inline">All People</span>
-              <span className="sr-only sm:hidden">All People</span>
-            </Link>
-          </Button>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Your family overview at a glance
+        </p>
       </div>
 
       {/* Reminder Banner - shows due reminders prominently */}
