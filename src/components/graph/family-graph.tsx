@@ -53,17 +53,6 @@ function PersonNode({ data, id }: NodeProps) {
   const familyColor = colorIndex >= 0 ? colors[colorIndex % colors.length] : null;
   const isMe = nodeData.isMe;
   const [tapCount, setTapCount] = useState(0);
-  const tapTimerRef = useCallback(() => {
-    let timer: NodeJS.Timeout | null = null;
-    return {
-      set: (fn: () => void, delay: number) => {
-        timer = setTimeout(fn, delay);
-      },
-      clear: () => {
-        if (timer) clearTimeout(timer);
-      }
-    };
-  }, [])();
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -517,21 +506,14 @@ function calculateLayout(
     });
   });
 
-  // Create edges
-  // Debug: log all relationships and their types
-  console.log("Creating edges for relationships:", filteredRelationships.map(r => ({ id: r.id, type: r.type, from: r.personAId, to: r.personBId })));
-
+  // Create edges for ALL relationships
   filteredRelationships.forEach((r) => {
     const config = RELATIONSHIP_CONFIG[r.type as keyof typeof RELATIONSHIP_CONFIG];
     const hexColor = getRelationshipHex(r.type as RelationshipType, relationshipColors);
 
-    // Make edges more visible, especially siblings
+    // Make edges more visible
     const isSibling = r.type === "sibling";
     const isSpouseOrPartner = r.type === "spouse" || r.type === "partner";
-
-    if (isSibling) {
-      console.log("Creating SIBLING edge:", r.id, "between", r.personAId, "and", r.personBId, "color:", hexColor);
-    }
 
     edges.push({
       id: r.id,
@@ -540,9 +522,9 @@ function calculateLayout(
       type: "smoothstep",
       animated: isSpouseOrPartner,
       style: {
-        stroke: hexColor,
-        strokeWidth: isSibling ? 3 : 2,
-        strokeDasharray: isSibling ? "5,5" : undefined,
+        stroke: isSibling ? "#22c55e" : hexColor, // Green for siblings
+        strokeWidth: isSibling ? 4 : 2, // Thicker for siblings
+        strokeDasharray: isSibling ? "8,4" : undefined, // Dashed for siblings
       },
       markerEnd: isSibling ? undefined : {
         type: MarkerType.ArrowClosed,
@@ -550,16 +532,16 @@ function calculateLayout(
       },
       label: config?.label || r.type,
       labelStyle: {
-        fill: "#666",
-        fontSize: 11,
-        fontWeight: 600,
+        fill: isSibling ? "#16a34a" : "#666",
+        fontSize: 12,
+        fontWeight: 700,
       },
       labelBgStyle: {
         fill: "white",
-        fillOpacity: 0.95,
+        fillOpacity: 1,
       },
-      labelBgPadding: [6, 4] as [number, number],
-      labelBgBorderRadius: 4,
+      labelBgPadding: [8, 4] as [number, number],
+      labelBgBorderRadius: 6,
     });
   });
 
