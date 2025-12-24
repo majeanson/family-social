@@ -35,11 +35,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { X, Plus, Trash2 } from "lucide-react";
+import { X, Plus, Trash2, Users } from "lucide-react";
 import { isValidEmail, isValidBirthday, isValidPhone } from "@/lib/utils";
 import type { Person } from "@/types";
 import { RelationshipSelector } from "@/components/relationships";
 import { RELATIONSHIP_CONFIG, type RelationshipType } from "@/types";
+
+// Relationship types that should be propagated to spouse/partner
+const SPOUSE_PROPAGATABLE_TYPES: RelationshipType[] = ["child", "grandchild", "parent", "grandparent"];
+
+// Relationship types that should be propagated to siblings
+const SIBLING_PROPAGATABLE_TYPES: RelationshipType[] = ["sibling"];
+
+interface PropagationOption {
+  personId: string;
+  personName: string;
+  relationshipType: "spouse" | "partner" | "sibling";
+}
+
+interface PendingPropagation {
+  targetPersonId: string;
+  targetPersonName: string;
+  relationshipType: RelationshipType;
+  propagationOptions: PropagationOption[];
+}
 
 interface EditPersonDialogProps {
   person: Person | null;
@@ -107,10 +126,48 @@ function EditPersonFormContent({
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Relationship propagation state
+  const [pendingPropagation, setPendingPropagation] = useState<PendingPropagation | null>(null);
+  const [selectedPropagations, setSelectedPropagations] = useState<Set<string>>(new Set());
+
   // Get person's relationships
   const personRelationships = relationships.filter(
     (r) => r.personAId === person.id || r.personBId === person.id
   );
+
+  // Find spouse/partner of the person being edited
+  const getSpouseOrPartner = useCallback((): Person | null => {
+    const spouseRel = personRelationships.find((r) => {
+      const type = r.personAId === person.id ? r.type : r.reverseType || r.type;
+      return type === "spouse" || type === "partner";
+    });
+    if (!spouseRel) return null;
+    const spouseId = spouseRel.personAId === person.id ? spouseRel.personBId : spouseRel.personAId;
+    return people.find((p) => p.id === spouseId) || null;
+  }, [personRelationships, person.id, people]);
+
+  // Find siblings of the person being edited
+  const getSiblings = useCallback((): Person[] => {
+    return personRelationships
+      .filter((r) => {
+        const type = r.personAId === person.id ? r.type : r.reverseType || r.type;
+        return type === "sibling";
+      })
+      .map((r) => {
+        const siblingId = r.personAId === person.id ? r.personBId : r.personAId;
+        return people.find((p) => p.id === siblingId);
+      })
+      .filter((p): p is Person => p !== undefined);
+  }, [personRelationships, person.id, people]);
+
+  // Check if a relationship already exists between two people
+  const relationshipExists = useCallback((personAId: string, personBId: string): boolean => {
+    return relationships.some(
+      (r) =>
+        (r.personAId === personAId && r.personBId === personBId) ||
+        (r.personAId === personBId && r.personBId === personAId)
+    );
+  }, [relationships]);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -217,11 +274,99 @@ function EditPersonFormContent({
       return;
     }
 
-    addRelationship(person.id, newRelationshipPersonId, newRelationshipType);
     const relatedPerson = people.find((p) => p.id === newRelationshipPersonId);
-    toast.success(`Added ${RELATIONSHIP_CONFIG[newRelationshipType].label} relationship with ${relatedPerson?.firstName}`);
+    if (!relatedPerson) return;
+
+    // Check if this relationship type should trigger propagation options
+    const propagationOptions: PropagationOption[] = [];
+
+    // Check for spouse/partner propagation
+    if (SPOUSE_PROPAGATABLE_TYPES.includes(newRelationshipType)) {
+      const spouse = getSpouseOrPartner();
+      if (spouse && !relationshipExists(spouse.id, newRelationshipPersonId)) {
+        const spouseRel = personRelationships.find((r) => {
+          const type = r.personAId === person.id ? r.type : r.reverseType || r.type;
+          return type === "spouse" || type === "partner";
+        });
+        const relType = spouseRel?.type === "spouse" || spouseRel?.reverseType === "spouse" ? "spouse" : "partner";
+        propagationOptions.push({
+          personId: spouse.id,
+          personName: `${spouse.firstName}${spouse.lastName ? ` ${spouse.lastName}` : ""}`,
+          relationshipType: relType as "spouse" | "partner",
+        });
+      }
+    }
+
+    // Check for sibling propagation
+    if (SIBLING_PROPAGATABLE_TYPES.includes(newRelationshipType)) {
+      const siblings = getSiblings();
+      for (const sibling of siblings) {
+        if (!relationshipExists(sibling.id, newRelationshipPersonId)) {
+          propagationOptions.push({
+            personId: sibling.id,
+            personName: `${sibling.firstName}${sibling.lastName ? ` ${sibling.lastName}` : ""}`,
+            relationshipType: "sibling",
+          });
+        }
+      }
+    }
+
+    // Add the primary relationship
+    addRelationship(person.id, newRelationshipPersonId, newRelationshipType);
+
+    // If there are propagation options, show the dialog
+    if (propagationOptions.length > 0) {
+      setPendingPropagation({
+        targetPersonId: newRelationshipPersonId,
+        targetPersonName: `${relatedPerson.firstName}${relatedPerson.lastName ? ` ${relatedPerson.lastName}` : ""}`,
+        relationshipType: newRelationshipType,
+        propagationOptions,
+      });
+      // Pre-select all options by default
+      setSelectedPropagations(new Set(propagationOptions.map((o) => o.personId)));
+    } else {
+      toast.success(`Added ${RELATIONSHIP_CONFIG[newRelationshipType].label} relationship with ${relatedPerson.firstName}`);
+    }
+
     setNewRelationshipPersonId("");
-  }, [person.id, newRelationshipPersonId, newRelationshipType, personRelationships, addRelationship, people]);
+  }, [person.id, newRelationshipPersonId, newRelationshipType, personRelationships, addRelationship, people, getSpouseOrPartner, getSiblings, relationshipExists]);
+
+  // Handle confirming propagation
+  const handleConfirmPropagation = useCallback(() => {
+    if (!pendingPropagation) return;
+
+    const propagatedTo: string[] = [];
+    for (const option of pendingPropagation.propagationOptions) {
+      if (selectedPropagations.has(option.personId)) {
+        addRelationship(option.personId, pendingPropagation.targetPersonId, pendingPropagation.relationshipType);
+        propagatedTo.push(option.personName);
+      }
+    }
+
+    if (propagatedTo.length > 0) {
+      toast.success(
+        `Added ${RELATIONSHIP_CONFIG[pendingPropagation.relationshipType].label} relationship with ${pendingPropagation.targetPersonName} for you and ${propagatedTo.join(", ")}`
+      );
+    } else {
+      toast.success(
+        `Added ${RELATIONSHIP_CONFIG[pendingPropagation.relationshipType].label} relationship with ${pendingPropagation.targetPersonName}`
+      );
+    }
+
+    setPendingPropagation(null);
+    setSelectedPropagations(new Set());
+  }, [pendingPropagation, selectedPropagations, addRelationship]);
+
+  // Handle skipping propagation
+  const handleSkipPropagation = useCallback(() => {
+    if (pendingPropagation) {
+      toast.success(
+        `Added ${RELATIONSHIP_CONFIG[pendingPropagation.relationshipType].label} relationship with ${pendingPropagation.targetPersonName}`
+      );
+    }
+    setPendingPropagation(null);
+    setSelectedPropagations(new Set());
+  }, [pendingPropagation]);
 
   const handleDeleteRelationship = useCallback((relationshipId: string) => {
     deleteRelationship(relationshipId);
@@ -596,6 +741,64 @@ function EditPersonFormContent({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Relationship Propagation Dialog */}
+      <AlertDialog open={!!pendingPropagation} onOpenChange={(open) => !open && handleSkipPropagation()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Add for family members too?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  You added <strong>{pendingPropagation?.targetPersonName}</strong> as{" "}
+                  <strong>{pendingPropagation && RELATIONSHIP_CONFIG[pendingPropagation.relationshipType].label}</strong>.
+                </p>
+                <p>Would you like to add the same relationship for:</p>
+                <div className="space-y-2 mt-3">
+                  {pendingPropagation?.propagationOptions.map((option) => (
+                    <label
+                      key={option.personId}
+                      className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedPropagations.has(option.personId)}
+                        onChange={(e) => {
+                          const newSet = new Set(selectedPropagations);
+                          if (e.target.checked) {
+                            newSet.add(option.personId);
+                          } else {
+                            newSet.delete(option.personId);
+                          }
+                          setSelectedPropagations(newSet);
+                        }}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      <div>
+                        <span className="font-medium">{option.personName}</span>
+                        <span className="text-muted-foreground ml-1">
+                          (your {option.relationshipType})
+                        </span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleSkipPropagation}>
+              Skip
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmPropagation}>
+              Add for Selected
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

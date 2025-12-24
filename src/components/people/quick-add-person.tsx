@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useDataStore } from "@/stores/data-store";
 import { RelationshipSelector } from "@/components/relationships";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,9 +37,29 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { isValidEmail, isValidBirthday, isValidPhone } from "@/lib/utils";
-import type { RelationshipType, FormTemplate } from "@/types";
+import type { RelationshipType, FormTemplate, Person } from "@/types";
+import { RELATIONSHIP_CONFIG } from "@/types";
 import { MOCK_FORM_TEMPLATES } from "@/lib/mock-data";
-import { User, Link2, Info, FileText, Sparkles } from "lucide-react";
+import { User, Link2, Info, FileText, Sparkles, Users } from "lucide-react";
+
+// Relationship types that should be propagated to spouse/partner
+const SPOUSE_PROPAGATABLE_TYPES: RelationshipType[] = ["child", "grandchild", "parent", "grandparent"];
+
+// Relationship types that should be propagated to siblings
+const SIBLING_PROPAGATABLE_TYPES: RelationshipType[] = ["sibling"];
+
+interface PropagationOption {
+  personId: string;
+  personName: string;
+  relationshipType: "spouse" | "partner" | "sibling";
+}
+
+interface PendingPropagation {
+  newPersonId: string;
+  newPersonName: string;
+  relationshipType: RelationshipType;
+  propagationOptions: PropagationOption[];
+}
 
 interface QuickAddPersonProps {
   open: boolean;
@@ -37,7 +67,7 @@ interface QuickAddPersonProps {
 }
 
 export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
-  const { addPerson, addRelationship, people, formTemplates } = useDataStore();
+  const { addPerson, addRelationship, people, relationships, formTemplates } = useDataStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photo, setPhoto] = useState<string | undefined>();
   const [firstName, setFirstName] = useState("");
@@ -45,6 +75,62 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
   const [relatedTo, setRelatedTo] = useState<string>("");
   const [relationshipType, setRelationshipType] = useState<RelationshipType | "">("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+
+  // Propagation state
+  const [pendingPropagation, setPendingPropagation] = useState<PendingPropagation | null>(null);
+  const [selectedPropagations, setSelectedPropagations] = useState<Set<string>>(new Set());
+
+  // Find spouse/partner of a given person
+  const getSpouseOrPartner = useCallback((personId: string): Person | null => {
+    const personRels = relationships.filter(
+      (r) => r.personAId === personId || r.personBId === personId
+    );
+    const spouseRel = personRels.find((r) => {
+      const type = r.personAId === personId ? r.type : r.reverseType || r.type;
+      return type === "spouse" || type === "partner";
+    });
+    if (!spouseRel) return null;
+    const spouseId = spouseRel.personAId === personId ? spouseRel.personBId : spouseRel.personAId;
+    return people.find((p) => p.id === spouseId) || null;
+  }, [relationships, people]);
+
+  // Find siblings of a given person
+  const getSiblings = useCallback((personId: string): Person[] => {
+    const personRels = relationships.filter(
+      (r) => r.personAId === personId || r.personBId === personId
+    );
+    return personRels
+      .filter((r) => {
+        const type = r.personAId === personId ? r.type : r.reverseType || r.type;
+        return type === "sibling";
+      })
+      .map((r) => {
+        const siblingId = r.personAId === personId ? r.personBId : r.personAId;
+        return people.find((p) => p.id === siblingId);
+      })
+      .filter((p): p is Person => p !== undefined);
+  }, [relationships, people]);
+
+  // Check if a relationship already exists between two people
+  const relationshipExists = useCallback((personAId: string, personBId: string): boolean => {
+    return relationships.some(
+      (r) =>
+        (r.personAId === personAId && r.personBId === personBId) ||
+        (r.personAId === personBId && r.personBId === personAId)
+    );
+  }, [relationships]);
+
+  // Get the relationship type for spouse display
+  const getSpouseRelType = useCallback((personId: string): "spouse" | "partner" => {
+    const personRels = relationships.filter(
+      (r) => r.personAId === personId || r.personBId === personId
+    );
+    const spouseRel = personRels.find((r) => {
+      const type = r.personAId === personId ? r.type : r.reverseType || r.type;
+      return type === "spouse" || type === "partner";
+    });
+    return spouseRel?.type === "spouse" || spouseRel?.reverseType === "spouse" ? "spouse" : "partner";
+  }, [relationships]);
 
   // Combine user templates with mock templates
   const allTemplates = useMemo(() => {
@@ -122,6 +208,57 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
     // Add relationship if specified
     if (relatedTo && relationshipType) {
       addRelationship(personId, relatedTo, relationshipType);
+
+      // Check for propagation options
+      const propagationOptions: PropagationOption[] = [];
+      const newPersonFullName = `${firstName.trim()}${lastName.trim() ? ` ${lastName.trim()}` : ""}`;
+
+      // Check for spouse/partner propagation (from the "relatedTo" person's perspective)
+      if (SPOUSE_PROPAGATABLE_TYPES.includes(relationshipType)) {
+        const spouse = getSpouseOrPartner(relatedTo);
+        if (spouse && !relationshipExists(spouse.id, personId)) {
+          propagationOptions.push({
+            personId: spouse.id,
+            personName: `${spouse.firstName}${spouse.lastName ? ` ${spouse.lastName}` : ""}`,
+            relationshipType: getSpouseRelType(relatedTo),
+          });
+        }
+      }
+
+      // Check for sibling propagation
+      if (SIBLING_PROPAGATABLE_TYPES.includes(relationshipType)) {
+        const siblings = getSiblings(relatedTo);
+        for (const sibling of siblings) {
+          if (!relationshipExists(sibling.id, personId)) {
+            propagationOptions.push({
+              personId: sibling.id,
+              personName: `${sibling.firstName}${sibling.lastName ? ` ${sibling.lastName}` : ""}`,
+              relationshipType: "sibling",
+            });
+          }
+        }
+      }
+
+      // If there are propagation options, show the dialog
+      if (propagationOptions.length > 0) {
+        setPendingPropagation({
+          newPersonId: personId,
+          newPersonName: newPersonFullName,
+          relationshipType,
+          propagationOptions,
+        });
+        setSelectedPropagations(new Set(propagationOptions.map((o) => o.personId)));
+        // Reset form but don't close dialog yet
+        setIsSubmitting(false);
+        setPhoto(undefined);
+        setFirstName("");
+        setLastName("");
+        setRelatedTo("");
+        setRelationshipType("");
+        setSelectedTemplateId(null);
+        onOpenChange(false);
+        return;
+      }
     }
 
     toast.success(`${firstName}${lastName ? ` ${lastName}` : ""} added!`);
@@ -145,7 +282,41 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
     onOpenChange(false);
   };
 
+  // Handle confirming propagation
+  const handleConfirmPropagation = useCallback(() => {
+    if (!pendingPropagation) return;
+
+    const propagatedTo: string[] = [];
+    for (const option of pendingPropagation.propagationOptions) {
+      if (selectedPropagations.has(option.personId)) {
+        addRelationship(option.personId, pendingPropagation.newPersonId, pendingPropagation.relationshipType);
+        propagatedTo.push(option.personName);
+      }
+    }
+
+    if (propagatedTo.length > 0) {
+      toast.success(
+        `${pendingPropagation.newPersonName} added as ${RELATIONSHIP_CONFIG[pendingPropagation.relationshipType].label} for ${propagatedTo.join(", ")} too!`
+      );
+    } else {
+      toast.success(`${pendingPropagation.newPersonName} added!`);
+    }
+
+    setPendingPropagation(null);
+    setSelectedPropagations(new Set());
+  }, [pendingPropagation, selectedPropagations, addRelationship]);
+
+  // Handle skipping propagation
+  const handleSkipPropagation = useCallback(() => {
+    if (pendingPropagation) {
+      toast.success(`${pendingPropagation.newPersonName} added!`);
+    }
+    setPendingPropagation(null);
+    setSelectedPropagations(new Set());
+  }, [pendingPropagation]);
+
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
@@ -367,5 +538,64 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
         </form>
       </DialogContent>
     </Dialog>
+
+    {/* Relationship Propagation Dialog */}
+    <AlertDialog open={!!pendingPropagation} onOpenChange={(open) => !open && handleSkipPropagation()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Add for family members too?
+          </AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-3">
+              <p>
+                You added <strong>{pendingPropagation?.newPersonName}</strong> as{" "}
+                <strong>{pendingPropagation && RELATIONSHIP_CONFIG[pendingPropagation.relationshipType].label}</strong>.
+              </p>
+              <p>Would you like to add the same relationship for:</p>
+              <div className="space-y-2 mt-3">
+                {pendingPropagation?.propagationOptions.map((option) => (
+                  <label
+                    key={option.personId}
+                    className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedPropagations.has(option.personId)}
+                      onChange={(e) => {
+                        const newSet = new Set(selectedPropagations);
+                        if (e.target.checked) {
+                          newSet.add(option.personId);
+                        } else {
+                          newSet.delete(option.personId);
+                        }
+                        setSelectedPropagations(newSet);
+                      }}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    <div>
+                      <span className="font-medium">{option.personName}</span>
+                      <span className="text-muted-foreground ml-1">
+                        ({option.relationshipType})
+                      </span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={handleSkipPropagation}>
+            Skip
+          </AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmPropagation}>
+            Add for Selected
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
