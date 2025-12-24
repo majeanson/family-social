@@ -122,10 +122,10 @@ export function FamilyTreeView() {
             width: NODE_WIDTH,
           });
 
-          // Add spouse connector line
+          // Add spouse connector line - extend 10px into each card for better visual connection
           lines.push({
-            from: { x: primaryX + NODE_WIDTH / 2, y },
-            to: { x: spouseX - NODE_WIDTH / 2, y },
+            from: { x: primaryX + NODE_WIDTH / 2 - 10, y },
+            to: { x: spouseX - NODE_WIDTH / 2 + 10, y },
             style: "double",
           });
         }
@@ -134,20 +134,17 @@ export function FamilyTreeView() {
       });
     });
 
-    // Add parent-child lines
+    // Add parent-child and sibling lines
     for (const rel of relationships) {
       const fromPos = positions.get(rel.personAId);
       const toPos = positions.get(rel.personBId);
       if (!fromPos || !toPos) continue;
 
-      // Determine if this is a parent-child relationship
-      const isParentChild =
-        rel.type.toLowerCase().includes("parent") ||
-        rel.type.toLowerCase().includes("child") ||
-        rel.type.toLowerCase().includes("father") ||
-        rel.type.toLowerCase().includes("mother") ||
-        rel.type.toLowerCase().includes("son") ||
-        rel.type.toLowerCase().includes("daughter");
+      const relType = rel.type.toLowerCase();
+
+      // Determine relationship type using exact matches
+      const isParentChild = relType === "parent" || relType === "child";
+      const isSibling = relType === "sibling";
 
       if (isParentChild) {
         // Vertical line for parent-child
@@ -158,6 +155,13 @@ export function FamilyTreeView() {
           from: { x: parentPos.x, y: parentPos.y + 60 }, // Bottom of parent
           to: { x: childPos.x, y: childPos.y - 60 }, // Top of child
           style: "solid",
+        });
+      } else if (isSibling) {
+        // Sibling line - curved line above the nodes (same generation check removed - trust the data)
+        lines.push({
+          from: { x: fromPos.x, y: fromPos.y - 70 }, // Top of first sibling
+          to: { x: toPos.x, y: toPos.y - 70 }, // Top of second sibling
+          style: "dashed",
         });
       }
     }
@@ -263,19 +267,22 @@ export function FamilyTreeView() {
   }, []);
 
   // Center view on initial load or when focus changes
+  // Note: We intentionally exclude zoom from deps to prevent re-centering on zoom change
   useEffect(() => {
     if (focusPersonId && nodePositions.has(focusPersonId)) {
       const pos = nodePositions.get(focusPersonId)!;
       // Center the focused person
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
+        // Use zoom=1 for initial centering to avoid feedback loop
         setPan({
-          x: rect.width / 2 - pos.x * zoom,
-          y: rect.height / 3 - pos.y * zoom,
+          x: rect.width / 2 - pos.x,
+          y: rect.height / 3 - pos.y,
         });
+        setZoom(1); // Reset zoom when focus changes
       }
     }
-  }, [focusPersonId, nodePositions, zoom]);
+  }, [focusPersonId, nodePositions]);
 
   if (!layout || people.length === 0) {
     return (
@@ -412,6 +419,28 @@ export function FamilyTreeView() {
                 );
               }
 
+              if (line.style === "dashed") {
+                // Sibling connector - curved line above nodes
+                const fromX = line.from.x + contentBounds.width / 2;
+                const toX = line.to.x + contentBounds.width / 2;
+                const y = line.from.y;
+                const curveHeight = 30; // How high the curve arcs above
+
+                return (
+                  <path
+                    key={i}
+                    d={`
+                      M ${fromX} ${y}
+                      Q ${(fromX + toX) / 2} ${y - curveHeight} ${toX} ${y}
+                    `}
+                    fill="none"
+                    stroke="rgb(34, 197, 94)" // green-500 for siblings
+                    strokeWidth="3"
+                    strokeDasharray="8,4"
+                  />
+                );
+              }
+
               // Parent-child vertical connector with step
               return (
                 <path
@@ -425,7 +454,6 @@ export function FamilyTreeView() {
                   fill="none"
                   stroke="rgb(148, 163, 184)" // slate-400
                   strokeWidth="2"
-                  strokeDasharray={line.style === "dashed" ? "8,4" : undefined}
                 />
               );
             })}
@@ -461,8 +489,8 @@ export function FamilyTreeView() {
 
       {/* Instructions - different for mobile vs desktop */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-muted-foreground bg-background/80 backdrop-blur px-3 py-1.5 rounded-full text-center">
-        <span className="hidden sm:inline">Click a person to focus | Drag to pan | Ctrl+scroll to zoom</span>
-        <span className="sm:hidden">Tap to focus | Drag to pan | Pinch to zoom</span>
+        <span className="hidden sm:inline">Click to focus | Double-click for profile | Drag to pan | Ctrl+scroll to zoom</span>
+        <span className="sm:hidden">Tap to focus | Double-tap for profile | Drag to pan | Pinch to zoom</span>
       </div>
     </div>
   );

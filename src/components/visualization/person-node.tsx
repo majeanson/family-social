@@ -1,6 +1,7 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn, getInitials } from "@/lib/utils";
@@ -9,6 +10,8 @@ import { useFamilyGroups, usePrimaryUser } from "@/features";
 import { getDegreeStyles } from "./hooks/use-focus-state";
 import type { Person } from "@/types";
 import { Crown, Calendar } from "lucide-react";
+
+const DOUBLE_TAP_DELAY = 400; // ms
 
 export interface PersonNodeProps {
   person: Person;
@@ -27,6 +30,7 @@ export const PersonNode = memo(function PersonNode({
   showBirthday = true,
   compact = false,
 }: PersonNodeProps) {
+  const router = useRouter();
   const { getFamilyColor } = useFamilyGroups();
   const { isMe } = usePrimaryUser();
   const familyColor = getFamilyColor(person.id);
@@ -36,14 +40,38 @@ export const PersonNode = memo(function PersonNode({
   const displayName = person.nickname || person.firstName;
   const styles = getDegreeStyles(degree);
 
-  const handleClick = () => {
-    onClick?.(person.id);
-  };
+  // Track last tap time for double-tap detection
+  const lastTapRef = useRef<number>(0);
+
+  const handleClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    // Stop propagation to prevent parent drag handlers from interfering
+    e.stopPropagation();
+
+    const now = Date.now();
+    const timeSinceLastTap = now - lastTapRef.current;
+
+    if (timeSinceLastTap < DOUBLE_TAP_DELAY && timeSinceLastTap > 0) {
+      // Double tap - navigate to profile
+      router.push(`/people/${person.id}`);
+      lastTapRef.current = 0; // Reset to prevent triple-tap issues
+    } else {
+      // Single tap - focus on person
+      onClick?.(person.id);
+      lastTapRef.current = now;
+    }
+  }, [onClick, person.id, router]);
+
+  // Stop propagation on pointer down to prevent parent drag from starting
+  const handlePointerDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+  }, []);
 
   if (compact) {
     return (
       <button
         onClick={handleClick}
+        onMouseDown={handlePointerDown}
+        onTouchStart={handlePointerDown}
         className={cn(
           "flex items-center gap-2 px-3 py-2 rounded-lg border bg-card transition-all",
           "hover:shadow-md hover:border-primary/30 cursor-pointer",
@@ -76,6 +104,8 @@ export const PersonNode = memo(function PersonNode({
   return (
     <button
       onClick={handleClick}
+      onMouseDown={handlePointerDown}
+      onTouchStart={handlePointerDown}
       className={cn(
         "flex flex-col items-center p-4 rounded-xl border-2 bg-card transition-all",
         "hover:shadow-lg cursor-pointer",
