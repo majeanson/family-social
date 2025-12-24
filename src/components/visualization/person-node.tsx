@@ -52,7 +52,7 @@ export const PersonNode = memo(function PersonNode({
 
     if (timeSinceLastTap < DOUBLE_TAP_DELAY && timeSinceLastTap > 0) {
       // Double tap - navigate to profile
-      router.push(`/people/${person.id}`);
+      router.push(`/person/${person.id}`);
       lastTapRef.current = 0; // Reset to prevent triple-tap issues
     } else {
       // Single tap - focus on person
