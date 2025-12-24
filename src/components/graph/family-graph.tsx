@@ -563,12 +563,14 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }
     setNodes(layout.nodes);
     setEdges(layout.edges);
 
-    // Fit view after a short delay to allow nodes to render
-    const timer = setTimeout(() => {
-      fitView({ padding: 0.2, duration: 200 });
-    }, 50);
+    // Fit view after delays to allow nodes to render with proper dimensions
+    const timers = [50, 150, 300].map((delay) =>
+      setTimeout(() => {
+        fitView({ padding: 0.2, duration: 200, maxZoom: 1.5 });
+      }, delay)
+    );
 
-    return () => clearTimeout(timer);
+    return () => timers.forEach(clearTimeout);
   }, [people, relationships, familyGroups, selectedFamilyId, primaryUserId, relationshipColors, layoutType, setNodes, setEdges, fitView]);
 
   if (people.length === 0) {
@@ -581,9 +583,13 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }
 
   const handleInit = useCallback(() => {
     // Fit view on initial render after nodes have their dimensions
-    setTimeout(() => {
-      fitView({ padding: 0.2, duration: 200 });
-    }, 100);
+    // Use multiple attempts with increasing delays for reliability
+    const attempts = [50, 150, 300];
+    attempts.forEach((delay) => {
+      setTimeout(() => {
+        fitView({ padding: 0.2, duration: 200, maxZoom: 1.5 });
+      }, delay);
+    });
   }, [fitView]);
 
   return (
@@ -600,7 +606,9 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }
           fitViewOptions={{
             padding: 0.2,
             includeHiddenNodes: false,
+            maxZoom: 1.5,
           }}
+          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           minZoom={0.1}
           maxZoom={2}
           defaultEdgeOptions={{

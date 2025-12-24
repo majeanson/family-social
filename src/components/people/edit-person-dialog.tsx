@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { X, Plus, Trash2, Users, UserPlus, MapPin, Home, RotateCcw } from "lucide-react";
+import { X, Plus, Trash2, Users, UserPlus, MapPin, Home, RotateCcw, Pencil, Check } from "lucide-react";
 import { isValidEmail, isValidBirthday, isValidPhone } from "@/lib/utils";
 import type { Person } from "@/types";
 import { RelationshipSelector } from "@/components/relationships";
@@ -111,7 +111,12 @@ function EditPersonFormContent({
     setFamilyOverride,
     clearFamilyOverride,
     hasFamilyOverride,
+    renameFamilyGroup,
   } = useFamilyGroups();
+
+  // Family name editing state
+  const [editingFamilyName, setEditingFamilyName] = useState(false);
+  const [familyNameInput, setFamilyNameInput] = useState("");
 
   // Form state initialized from person props
   const [firstName, setFirstName] = useState(person.firstName);
@@ -967,18 +972,79 @@ function EditPersonFormContent({
               <div className="space-y-3">
                 {/* Current family info */}
                 <div className="p-3 rounded-lg border bg-muted/30">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">
-                        {getFamilyGroup(person.id)?.name || "No family assigned"}
-                      </p>
-                      {hasFamilyOverride(person.id) && (
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      {editingFamilyName ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={familyNameInput}
+                            onChange={(e) => setFamilyNameInput(e.target.value)}
+                            placeholder="Family name..."
+                            className="h-8 text-sm"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                const currentFamily = getFamilyGroup(person.id);
+                                if (currentFamily && familyNameInput.trim()) {
+                                  renameFamilyGroup(currentFamily.id, familyNameInput.trim());
+                                  toast.success(`Family renamed to "${familyNameInput.trim()}"`);
+                                }
+                                setEditingFamilyName(false);
+                              } else if (e.key === "Escape") {
+                                setEditingFamilyName(false);
+                              }
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={() => {
+                              const currentFamily = getFamilyGroup(person.id);
+                              if (currentFamily && familyNameInput.trim()) {
+                                renameFamilyGroup(currentFamily.id, familyNameInput.trim());
+                                toast.success(`Family renamed to "${familyNameInput.trim()}"`);
+                              }
+                              setEditingFamilyName(false);
+                            }}
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium truncate">
+                            {getFamilyGroup(person.id)?.name || "No family assigned"}
+                          </p>
+                          {getFamilyGroup(person.id) && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 shrink-0"
+                              onClick={() => {
+                                const currentFamily = getFamilyGroup(person.id);
+                                if (currentFamily) {
+                                  setFamilyNameInput(currentFamily.name);
+                                  setEditingFamilyName(true);
+                                }
+                              }}
+                              aria-label="Edit family name"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                      {!editingFamilyName && hasFamilyOverride(person.id) && (
                         <p className="text-xs text-muted-foreground">
                           Manually assigned (auto-detected: {getAutoDetectedFamily(person.id)?.name || "None"})
                         </p>
                       )}
                     </div>
-                    {hasFamilyOverride(person.id) && (
+                    {hasFamilyOverride(person.id) && !editingFamilyName && (
                       <Button
                         type="button"
                         variant="ghost"
@@ -987,7 +1053,7 @@ function EditPersonFormContent({
                           clearFamilyOverride(person.id);
                           toast.success("Family reset to auto-detected");
                         }}
-                        className="h-8"
+                        className="h-8 shrink-0"
                       >
                         <RotateCcw className="h-4 w-4 mr-1" />
                         Reset
