@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useFamilyGroups, FAMILY_COLORS } from "@/features/use-family-groups";
+import { useFamilyGroups } from "@/features/use-family-groups";
 import { searchPerson } from "@/lib/utils";
 import { getBirthdaySortValue } from "@/lib/date-utils";
 import { Plus, Search, Users, Filter, SortAsc, X, Network, LayoutGrid, Sparkles, Share2, CheckSquare, Square } from "lucide-react";
@@ -35,7 +35,7 @@ type ViewMode = "cards" | "quick";
 
 export function PeopleView() {
   const { people, settings } = useDataStore();
-  const { familyGroups, getFamilyGroup } = useFamilyGroups();
+  const { familyGroups, getFamilyGroup, colors } = useFamilyGroups();
   const [viewMode, setViewMode] = useState<ViewMode>("cards");
   const [searchQuery, setSearchQuery] = useState("");
   const [showQuickAdd, setShowQuickAdd] = useState(false);
@@ -235,7 +235,7 @@ export function PeopleView() {
                   <DropdownMenuLabel>Select all in family</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {familyGroups.map((group) => {
-                    const color = FAMILY_COLORS[group.colorIndex % FAMILY_COLORS.length];
+                    const color = colors[group.colorIndex % colors.length];
                     return (
                       <DropdownMenuCheckboxItem
                         key={group.id}
@@ -302,7 +302,7 @@ export function PeopleView() {
                     <SelectContent>
                       <SelectItem value="all">All Families</SelectItem>
                       {familyGroups.map((group) => {
-                        const color = FAMILY_COLORS[group.colorIndex % FAMILY_COLORS.length];
+                        const color = colors[group.colorIndex % colors.length];
                         return (
                           <SelectItem key={group.id} value={group.id}>
                             <div className="flex items-center gap-2">
@@ -413,9 +413,9 @@ export function PeopleView() {
                   type="button"
                   onClick={() => setSelectedFamilyId(null)}
                   aria-label={`Remove ${selectedFamily.name} filter`}
-                  className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:opacity-80 ${FAMILY_COLORS[selectedFamily.colorIndex % FAMILY_COLORS.length].light} ${FAMILY_COLORS[selectedFamily.colorIndex % FAMILY_COLORS.length].border}`}
+                  className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:opacity-80 ${colors[selectedFamily.colorIndex % colors.length].light} ${colors[selectedFamily.colorIndex % colors.length].border}`}
                 >
-                  <span className={`w-2 h-2 rounded-full mr-1.5 ${FAMILY_COLORS[selectedFamily.colorIndex % FAMILY_COLORS.length].bg}`} aria-hidden="true" />
+                  <span className={`w-2 h-2 rounded-full mr-1.5 ${colors[selectedFamily.colorIndex % colors.length].bg}`} aria-hidden="true" />
                   {selectedFamily.name} <X className="h-3 w-3 ml-1" aria-hidden="true" />
                 </button>
               )}

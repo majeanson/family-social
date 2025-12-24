@@ -87,11 +87,6 @@ export function getTailwindHex(colorClass: string): string {
   return TAILWIND_COLORS[color] || TAILWIND_COLORS["gray-400"];
 }
 
-/**
- * Family color palette for distinct family groups
- * Re-exported from types for convenience
- */
-export { DEFAULT_FAMILY_COLORS as FAMILY_COLORS } from "@/types/data-store";
 export type { FamilyColorConfig } from "@/types/data-store";
 
 /**

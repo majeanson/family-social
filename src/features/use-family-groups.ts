@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { useDataStore } from "@/stores/data-store";
 import type { Person, Relationship } from "@/types";
 import { DEFAULT_FAMILY_COLORS } from "@/types";
-import { FAMILY_COLORS } from "@/lib/utils";
 
 export interface FamilyGroup {
   id: string;
@@ -170,5 +169,3 @@ export function useFamilyGroups() {
     resetFamilyName,
   };
 }
-
-export { FAMILY_COLORS };
