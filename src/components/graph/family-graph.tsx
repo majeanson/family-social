@@ -15,6 +15,7 @@ import {
   Position,
   Handle,
   NodeProps,
+  type Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useRouter } from "next/navigation";
@@ -555,7 +556,25 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialLayout.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialLayout.edges);
-  const { fitView } = useReactFlow();
+  const { fitView, setViewport, getViewport } = useReactFlow();
+
+  // Center the view properly
+  const centerView = useCallback(() => {
+    // First try fitView
+    fitView({ padding: 0.3, duration: 300, maxZoom: 1.2 });
+
+    // Then verify and adjust if needed
+    setTimeout(() => {
+      const viewport = getViewport();
+      // If viewport seems off (x or y too extreme), reset to center
+      if (Math.abs(viewport.x) > 1000 || Math.abs(viewport.y) > 1000) {
+        setViewport({ x: 0, y: 0, zoom: 0.8 }, { duration: 200 });
+        setTimeout(() => {
+          fitView({ padding: 0.3, duration: 200, maxZoom: 1.2 });
+        }, 250);
+      }
+    }, 350);
+  }, [fitView, setViewport, getViewport]);
 
   // Update layout when data changes
   useEffect(() => {
@@ -563,15 +582,10 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }
     setNodes(layout.nodes);
     setEdges(layout.edges);
 
-    // Fit view after delays to allow nodes to render with proper dimensions
-    const timers = [50, 150, 300].map((delay) =>
-      setTimeout(() => {
-        fitView({ padding: 0.2, duration: 200, maxZoom: 1.5 });
-      }, delay)
-    );
-
-    return () => timers.forEach(clearTimeout);
-  }, [people, relationships, familyGroups, selectedFamilyId, primaryUserId, relationshipColors, layoutType, setNodes, setEdges, fitView]);
+    // Center view after layout updates
+    const timer = setTimeout(centerView, 100);
+    return () => clearTimeout(timer);
+  }, [people, relationships, familyGroups, selectedFamilyId, primaryUserId, relationshipColors, layoutType, setNodes, setEdges, centerView]);
 
   if (people.length === 0) {
     return (
@@ -582,15 +596,9 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }
   }
 
   const handleInit = useCallback(() => {
-    // Fit view on initial render after nodes have their dimensions
-    // Use multiple attempts with increasing delays for reliability
-    const attempts = [50, 150, 300];
-    attempts.forEach((delay) => {
-      setTimeout(() => {
-        fitView({ padding: 0.2, duration: 200, maxZoom: 1.5 });
-      }, delay);
-    });
-  }, [fitView]);
+    // Center view on initial render
+    setTimeout(centerView, 100);
+  }, [centerView]);
 
   return (
     <ColorsContext.Provider value={colors}>
@@ -604,11 +612,10 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }
           onInit={handleInit}
           fitView
           fitViewOptions={{
-            padding: 0.2,
+            padding: 0.3,
             includeHiddenNodes: false,
-            maxZoom: 1.5,
+            maxZoom: 1.2,
           }}
-          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           minZoom={0.1}
           maxZoom={2}
           defaultEdgeOptions={{
