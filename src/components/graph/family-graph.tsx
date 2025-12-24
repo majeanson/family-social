@@ -30,8 +30,9 @@ import { detectFamilyGroups, type FamilyGroup } from "@/features/use-family-grou
 // Layout types
 export type GraphLayoutType = "radial" | "hierarchical" | "force";
 
-// Context to pass colors to nodes
+// Context to pass colors and centering function to nodes
 const ColorsContext = createContext<FamilyColorConfig[]>(DEFAULT_FAMILY_COLORS);
+const CenterOnNodeContext = createContext<((nodeId: string) => void) | null>(null);
 
 interface PersonNodeData {
   person: Person;
@@ -42,14 +43,55 @@ interface PersonNodeData {
 }
 
 // Custom node component for people
-function PersonNode({ data }: NodeProps) {
+function PersonNode({ data, id }: NodeProps) {
   const router = useRouter();
   const colors = useContext(ColorsContext);
+  const centerOnNode = useContext(CenterOnNodeContext);
   const nodeData = data as unknown as PersonNodeData;
   const person = nodeData.person;
   const colorIndex = nodeData.familyColorIndex ?? -1;
   const familyColor = colorIndex >= 0 ? colors[colorIndex % colors.length] : null;
   const isMe = nodeData.isMe;
+  const [tapCount, setTapCount] = useState(0);
+  const tapTimerRef = useCallback(() => {
+    let timer: NodeJS.Timeout | null = null;
+    return {
+      set: (fn: () => void, delay: number) => {
+        timer = setTimeout(fn, delay);
+      },
+      clear: () => {
+        if (timer) clearTimeout(timer);
+      }
+    };
+  }, [])();
+
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    // Check if mobile (touch device)
+    const isMobile = window.matchMedia("(max-width: 768px)").matches ||
+                     'ontouchstart' in window;
+
+    if (isMobile) {
+      // On mobile: first tap centers, second tap navigates
+      setTapCount(prev => {
+        const newCount = prev + 1;
+        if (newCount === 1) {
+          // First tap - center on this node
+          centerOnNode?.(id);
+          // Reset tap count after delay
+          setTimeout(() => setTapCount(0), 500);
+        } else if (newCount >= 2) {
+          // Second tap - navigate
+          router.push(`/person/${person.id}`);
+        }
+        return newCount;
+      });
+    } else {
+      // On desktop: single click navigates
+      router.push(`/person/${person.id}`);
+    }
+  }, [centerOnNode, id, person.id, router]);
 
   return (
     <div
@@ -63,7 +105,7 @@ function PersonNode({ data }: NodeProps) {
             : "bg-gray-50 border-gray-200 dark:bg-gray-950/50 dark:border-gray-800"
         }
       `}
-      onClick={() => router.push(`/person/${person.id}`)}
+      onClick={handleClick}
     >
       <Handle type="target" position={Position.Top} className="opacity-0" />
       <Handle type="source" position={Position.Bottom} className="opacity-0" />
@@ -480,31 +522,36 @@ function calculateLayout(
     const config = RELATIONSHIP_CONFIG[r.type as keyof typeof RELATIONSHIP_CONFIG];
     const hexColor = getRelationshipHex(r.type as RelationshipType, relationshipColors);
 
+    // Make edges more visible, especially siblings
+    const isSibling = r.type === "sibling";
+    const isSpouseOrPartner = r.type === "spouse" || r.type === "partner";
+
     edges.push({
       id: r.id,
       source: r.personAId,
       target: r.personBId,
-      type: "default",
-      animated: r.type === "spouse" || r.type === "partner",
+      type: "smoothstep",
+      animated: isSpouseOrPartner,
       style: {
         stroke: hexColor,
-        strokeWidth: 2,
+        strokeWidth: isSibling ? 3 : 2,
+        strokeDasharray: isSibling ? "5,5" : undefined,
       },
-      markerEnd: {
+      markerEnd: isSibling ? undefined : {
         type: MarkerType.ArrowClosed,
         color: hexColor,
       },
       label: config?.label || r.type,
       labelStyle: {
         fill: "#666",
-        fontSize: 10,
-        fontWeight: 500,
+        fontSize: 11,
+        fontWeight: 600,
       },
       labelBgStyle: {
         fill: "white",
-        fillOpacity: 0.9,
+        fillOpacity: 0.95,
       },
-      labelBgPadding: [4, 2] as [number, number],
+      labelBgPadding: [6, 4] as [number, number],
       labelBgBorderRadius: 4,
     });
   });
@@ -556,7 +603,7 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialLayout.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialLayout.edges);
-  const { fitView, setViewport, getViewport } = useReactFlow();
+  const { fitView, setViewport, getViewport, setCenter, getNode } = useReactFlow();
 
   // Center the view properly
   const centerView = useCallback(() => {
@@ -575,6 +622,17 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }
       }
     }, 350);
   }, [fitView, setViewport, getViewport]);
+
+  // Center on a specific node (for mobile tap)
+  const centerOnNode = useCallback((nodeId: string) => {
+    const node = getNode(nodeId);
+    if (node) {
+      // Calculate center of node (position is top-left corner)
+      const x = node.position.x + (node.measured?.width ?? 140) / 2;
+      const y = node.position.y + (node.measured?.height ?? 60) / 2;
+      setCenter(x, y, { duration: 300, zoom: 1.2 });
+    }
+  }, [getNode, setCenter]);
 
   // Update layout when data changes
   useEffect(() => {
@@ -602,31 +660,33 @@ function FamilyGraphInner({ selectedFamilyId, onFamilyGroupsChange, layoutType }
 
   return (
     <ColorsContext.Provider value={colors}>
-      <div className="h-[400px] sm:h-[500px] lg:h-[600px] rounded-lg border overflow-hidden">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          nodeTypes={nodeTypes}
-          onInit={handleInit}
-          fitView
-          fitViewOptions={{
-            padding: 0.3,
-            includeHiddenNodes: false,
-            maxZoom: 1.2,
-          }}
-          minZoom={0.1}
-          maxZoom={2}
-          defaultEdgeOptions={{
-            type: "smoothstep",
-          }}
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background color={bgGridColor} gap={20} />
-          <Controls position="bottom-right" />
-        </ReactFlow>
-      </div>
+      <CenterOnNodeContext.Provider value={centerOnNode}>
+        <div className="h-[400px] sm:h-[500px] lg:h-[600px] rounded-lg border overflow-hidden">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            nodeTypes={nodeTypes}
+            onInit={handleInit}
+            fitView
+            fitViewOptions={{
+              padding: 0.3,
+              includeHiddenNodes: false,
+              maxZoom: 1.2,
+            }}
+            minZoom={0.1}
+            maxZoom={2}
+            defaultEdgeOptions={{
+              type: "smoothstep",
+            }}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background color={bgGridColor} gap={20} />
+            <Controls position="bottom-right" />
+          </ReactFlow>
+        </div>
+      </CenterOnNodeContext.Provider>
     </ColorsContext.Provider>
   );
 }
