@@ -18,7 +18,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -49,8 +48,6 @@ import {
   HardDrive,
   Cloud,
   AlertTriangle,
-  ClipboardPaste,
-  UserPlus,
   Sun,
   Moon,
   Monitor,
@@ -69,136 +66,13 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import type { AppSettings, PersonFormData, FamilyColorConfig, RelationshipType, CustomField, ReminderTiming, ThemePreset, CustomTheme, ThemeColors } from "@/types";
+import type { AppSettings, FamilyColorConfig, RelationshipType, ReminderTiming, ThemePreset, CustomTheme, ThemeColors } from "@/types";
 import { DEFAULT_FAMILY_COLORS, RELATIONSHIP_CONFIG, getGroupedRelationshipTypes, REMINDER_TIMING_CONFIG, DEFAULT_NOTIFICATION_SETTINGS, THEME_PRESETS } from "@/types";
 import { Switch } from "@/components/ui/switch";
-import { v4 as uuid } from "uuid";
 import { GoogleDriveSync } from "@/components/sync/google-drive-sync";
 import { useFamilyGroups, usePrimaryUser } from "@/features";
 import { COLOR_OPTIONS, RELATIONSHIP_COLOR_OPTIONS, getRelationshipColor, getInitials } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
-// Known field keys (lowercase)
-const KNOWN_FIELD_KEYS = new Set([
-  "first name", "firstname", "name",
-  "last name", "lastname",
-  "nickname", "nick",
-  "email", "e-mail",
-  "phone", "telephone", "mobile",
-  "birthday", "birth date", "birthdate",
-  "photo",
-  "notes", "dietary restrictions",
-]);
-
-// Parse text format response (from Copy Text / Native Share)
-function parseTextResponse(text: string): PersonFormData | null {
-  try {
-    const lines = text.split("\n");
-    const data: Record<string, string> = {};
-    const originalKeys: Record<string, string> = {}; // Store original casing
-
-    for (const line of lines) {
-      // Skip empty lines, separators, and headers
-      if (!line.trim() || line.startsWith("---") || line.startsWith("📋") ||
-          line.startsWith("Submitted:") || line.startsWith("Sent via")) {
-        continue;
-      }
-
-      const colonIndex = line.indexOf(":");
-      if (colonIndex > 0) {
-        const originalKey = line.substring(0, colonIndex).trim();
-        const key = originalKey.toLowerCase();
-        const value = line.substring(colonIndex + 1).trim();
-        if (value && value !== "(not provided)") {
-          data[key] = value;
-          originalKeys[key] = originalKey;
-        }
-      }
-    }
-
-    // Map common field names
-    const firstName = data["first name"] || data["firstname"] || data["name"]?.split(" ")[0] || "";
-    if (!firstName) return null;
-
-    // Extract custom fields (fields not in known keys)
-    const customFields: CustomField[] = [];
-    for (const [key, value] of Object.entries(data)) {
-      if (!KNOWN_FIELD_KEYS.has(key)) {
-        customFields.push({
-          id: uuid(),
-          label: originalKeys[key] || key,
-          value,
-          type: "text",
-        });
-      }
-    }
-
-    return {
-      firstName,
-      lastName: data["last name"] || data["lastname"] || data["name"]?.split(" ").slice(1).join(" ") || "",
-      nickname: data["nickname"] || data["nick"] || "",
-      email: data["email"] || data["e-mail"] || "",
-      phone: data["phone"] || data["telephone"] || data["mobile"] || "",
-      birthday: data["birthday"] || data["birth date"] || data["birthdate"] || "",
-      notes: data["notes"] || data["dietary restrictions"] || "",
-      tags: [],
-      customFields,
-    };
-  } catch {
-    return null;
-  }
-}
-
-// Known field keys for JSON (case-insensitive matching)
-const KNOWN_JSON_FIELD_KEYS = new Set([
-  "first name", "firstname",
-  "last name", "lastname",
-  "nickname",
-  "email",
-  "phone",
-  "birthday", "birth date", "birthdate",
-  "photo",
-  "notes", "dietary restrictions",
-]);
-
-// Parse JSON format response
-function parseJSONResponse(json: string): PersonFormData | null {
-  try {
-    const parsed = JSON.parse(json);
-    const responses = parsed.responses || parsed;
-
-    const firstName = responses["First Name"] || responses["firstName"] || responses.firstName || "";
-    if (!firstName) return null;
-
-    // Extract custom fields (fields not in known keys)
-    const customFields: CustomField[] = [];
-    for (const [key, value] of Object.entries(responses)) {
-      const keyLower = key.toLowerCase();
-      if (!KNOWN_JSON_FIELD_KEYS.has(keyLower) && typeof value === "string" && value.trim()) {
-        customFields.push({
-          id: uuid(),
-          label: key,
-          value: value,
-          type: "text",
-        });
-      }
-    }
-
-    return {
-      firstName,
-      lastName: responses["Last Name"] || responses["lastName"] || responses.lastName || "",
-      nickname: responses["Nickname"] || responses["nickname"] || "",
-      email: responses["Email"] || responses["email"] || "",
-      phone: responses["Phone"] || responses["phone"] || "",
-      birthday: responses["Birthday"] || responses["birthday"] || responses["Birth Date"] || "",
-      notes: responses["Notes"] || responses["notes"] || responses["Dietary Restrictions"] || "",
-      tags: [],
-      customFields,
-    };
-  } catch {
-    return null;
-  }
-}
 
 // Settings sections for search
 const SETTINGS_SECTIONS = [
@@ -206,7 +80,6 @@ const SETTINGS_SECTIONS = [
   { id: "data", tab: "sync", keywords: ["data", "summary", "storage", "people", "relationships"] },
   { id: "import-export", tab: "sync", keywords: ["import", "export", "backup", "file", "json"] },
   { id: "profile", tab: "profile", keywords: ["me", "profile", "primary", "user", "myself"] },
-  { id: "import-response", tab: "profile", keywords: ["import", "response", "form", "paste", "share"] },
   { id: "theme", tab: "appearance", keywords: ["theme", "dark", "light", "mode", "color", "appearance"] },
   { id: "display", tab: "appearance", keywords: ["display", "view", "sort", "cards", "graph"] },
   { id: "colors", tab: "appearance", keywords: ["color", "family", "relationship", "customize"] },
@@ -221,7 +94,6 @@ export default function SettingsPage() {
     exportData,
     loadData,
     resetData,
-    addPerson,
     people,
     relationships,
     formTemplates,
@@ -232,21 +104,9 @@ export default function SettingsPage() {
   const [editingFamilyName, setEditingFamilyName] = useState("");
   const { me, setAsMe, clearMe } = usePrimaryUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const responseFileInputRef = useRef<HTMLInputElement>(null);
-  const [pastedResponse, setPastedResponse] = useState("");
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("sync");
-
-  // Search functionality
-  const matchedTab = useMemo(() => {
-    if (!searchQuery.trim()) return null;
-    const query = searchQuery.toLowerCase();
-    const match = SETTINGS_SECTIONS.find(section =>
-      section.keywords.some(kw => kw.includes(query) || query.includes(kw))
-    );
-    return match?.tab || null;
-  }, [searchQuery]);
 
   // Auto-switch tab on search
   const handleSearch = (query: string) => {
@@ -339,51 +199,6 @@ export default function SettingsPage() {
     resetData();
     toast.success("All data has been reset");
     setShowResetConfirm(false);
-  };
-
-  const handleImportResponse = () => {
-    if (!pastedResponse.trim()) {
-      toast.error("Please paste a response first");
-      return;
-    }
-
-    // Try JSON first, then text format
-    let personData = parseJSONResponse(pastedResponse);
-    if (!personData) {
-      personData = parseTextResponse(pastedResponse);
-    }
-
-    if (personData) {
-      addPerson(personData);
-      toast.success(`Added ${personData.firstName} ${personData.lastName || ""} to your people!`);
-      setPastedResponse("");
-    } else {
-      toast.error("Could not parse the response. Make sure you pasted the complete response.");
-    }
-  };
-
-  const handleImportResponseFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const personData = parseJSONResponse(text);
-
-      if (personData) {
-        addPerson(personData);
-        toast.success(`Added ${personData.firstName} ${personData.lastName || ""} to your people!`);
-      } else {
-        toast.error("Could not parse the file. Make sure it's a valid response JSON.");
-      }
-    } catch {
-      toast.error("Failed to read the file.");
-    }
-
-    // Reset file input
-    if (responseFileInputRef.current) {
-      responseFileInputRef.current.value = "";
-    }
   };
 
   const storageType = getStorage().getStorageType();
@@ -688,65 +503,6 @@ export default function SettingsPage() {
                   )}
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Import Shared Response */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserPlus className="h-5 w-5" />
-                Import Shared Response
-              </CardTitle>
-              <CardDescription>
-                Paste a response you received from a shared form to add them as a person
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="response-paste">Paste Response (Text or JSON)</Label>
-                <Textarea
-                  id="response-paste"
-                  value={pastedResponse}
-                  onChange={(e) => setPastedResponse(e.target.value)}
-                  placeholder={`Paste the response here...
-
-Examples:
-• Text from a message (First Name: John, Last Name: Doe, etc.)
-• JSON from the Download or Copy JSON option`}
-                  rows={6}
-                  className="font-mono text-sm"
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button onClick={handleImportResponse} className="flex-1">
-                  <ClipboardPaste className="mr-2 h-4 w-4" />
-                  Import from Paste
-                </Button>
-
-                <div>
-                  <input
-                    ref={responseFileInputRef}
-                    type="file"
-                    accept=".json"
-                    onChange={handleImportResponseFile}
-                    className="hidden"
-                    id="import-response-file"
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => responseFileInputRef.current?.click()}
-                  >
-                    <Upload className="mr-2 h-4 w-4" />
-                    Import File
-                  </Button>
-                </div>
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                Supports both text format (from Copy Text / Native Share) and JSON format (from Download / Copy JSON)
-              </p>
             </CardContent>
           </Card>
         </TabsContent>
