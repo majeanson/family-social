@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useDataStore } from "@/stores/data-store";
+import { detectFamilyGroups } from "@/features/use-family-groups";
 import type { Person, Relationship } from "@/types";
 
 export interface GenerationLayout {
@@ -38,11 +39,13 @@ function isSiblingType(type: string): boolean {
 /**
  * Assigns generations based on relationship semantics.
  * Focus person is generation 0, parents are -1, children are +1, etc.
+ * People are sorted by family group to keep families together.
  */
 function assignGenerations(
   focusPersonId: string,
   people: Person[],
-  relationships: Relationship[]
+  relationships: Relationship[],
+  personToFamilyId: Map<string, string>
 ): GenerationLayout {
   const generations = new Map<string, number>();
   const degrees = new Map<string, number>();
@@ -141,9 +144,17 @@ function assignGenerations(
     maxGen = Math.max(maxGen, gen);
   }
 
-  // Sort each generation by last name, then first name
-  for (const [, people] of byGeneration) {
-    people.sort((a, b) => {
+  // Sort each generation by family group first, then by last name, then first name
+  // This keeps family members together in the layout
+  for (const [, genPeople] of byGeneration) {
+    genPeople.sort((a, b) => {
+      // First, sort by family group ID to keep families together
+      const familyA = personToFamilyId.get(a.id) || "";
+      const familyB = personToFamilyId.get(b.id) || "";
+      const familyCmp = familyA.localeCompare(familyB);
+      if (familyCmp !== 0) return familyCmp;
+
+      // Within the same family, sort by last name, then first name
       const lastNameCmp = (a.lastName || "").localeCompare(b.lastName || "");
       if (lastNameCmp !== 0) return lastNameCmp;
       return a.firstName.localeCompare(b.firstName);
@@ -246,6 +257,15 @@ export function useGenerationLayout(focusPersonId: string | null): GenerationLay
   const { people, relationships, settings } = useDataStore();
 
   return useMemo(() => {
+    // Detect family groups and create a map of person ID -> family ID
+    const familyGroups = detectFamilyGroups(people, relationships);
+    const personToFamilyId = new Map<string, string>();
+    for (const group of familyGroups) {
+      for (const memberId of group.memberIds) {
+        personToFamilyId.set(memberId, group.id);
+      }
+    }
+
     // Determine focus person
     const effectiveFocusId = focusPersonId || settings.primaryUserId;
 
@@ -269,10 +289,10 @@ export function useGenerationLayout(focusPersonId: string | null): GenerationLay
         }
       }
 
-      return assignGenerations(mostConnected, people, relationships);
+      return assignGenerations(mostConnected, people, relationships, personToFamilyId);
     }
 
-    return assignGenerations(effectiveFocusId, people, relationships);
+    return assignGenerations(effectiveFocusId, people, relationships, personToFamilyId);
   }, [focusPersonId, people, relationships, settings.primaryUserId]);
 }
 
