@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useRef, useCallback } from "react";
+import { memo, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +36,7 @@ export const PersonNode = memo(function PersonNode({
   const familyColor = getFamilyColor(person.id);
   const isThisPersonMe = isMe(person.id);
   const initials = getInitials(person.firstName, person.lastName);
-  const birthday = getBirthdayInfo(person.birthday);
+  const birthday = useMemo(() => getBirthdayInfo(person.birthday), [person.birthday]);
   const displayName = person.nickname || person.firstName;
   const styles = getDegreeStyles(degree);
 
@@ -75,6 +75,7 @@ export const PersonNode = memo(function PersonNode({
         className={cn(
           "flex items-center gap-2 px-3 py-2 rounded-lg border bg-card transition-all",
           "hover:shadow-md hover:border-primary/30 cursor-pointer",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
           isFocused && "ring-2 ring-primary ring-offset-2",
           familyColor && `${familyColor.light} ${familyColor.border}`
         )}
@@ -109,6 +110,7 @@ export const PersonNode = memo(function PersonNode({
       className={cn(
         "relative flex flex-col items-center p-4 rounded-xl border-2 bg-card transition-all",
         "hover:shadow-lg cursor-pointer",
+        "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/50",
         isFocused && "ring-4 ring-primary/50 border-primary shadow-lg shadow-primary/20",
         !isFocused && "hover:border-primary/30",
         familyColor && `${familyColor.light} ${familyColor.border}`
@@ -185,47 +187,3 @@ export const PersonNode = memo(function PersonNode({
   );
 });
 
-/**
- * Spouse pair - displays two people side by side with connection
- */
-export interface SpousePairProps {
-  primary: Person;
-  spouse: Person;
-  focusPersonId: string | null;
-  degrees: Map<string, number>;
-  onPersonClick?: (personId: string) => void;
-}
-
-export const SpousePair = memo(function SpousePair({
-  primary,
-  spouse,
-  focusPersonId,
-  degrees,
-  onPersonClick,
-}: SpousePairProps) {
-  const primaryDegree = degrees.get(primary.id) ?? Infinity;
-  const spouseDegree = degrees.get(spouse.id) ?? Infinity;
-
-  return (
-    <div className="flex items-center gap-3">
-      <PersonNode
-        person={primary}
-        degree={primaryDegree}
-        isFocused={primary.id === focusPersonId}
-        onClick={onPersonClick}
-      />
-      {/* Spouse connector */}
-      <div className="flex items-center gap-1">
-        <div className="w-4 h-0.5 bg-rose-400" />
-        <div className="w-2 h-2 rounded-full bg-rose-400" />
-        <div className="w-4 h-0.5 bg-rose-400" />
-      </div>
-      <PersonNode
-        person={spouse}
-        degree={spouseDegree}
-        isFocused={spouse.id === focusPersonId}
-        onClick={onPersonClick}
-      />
-    </div>
-  );
-});

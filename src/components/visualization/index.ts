@@ -1,7 +1,7 @@
 export { VisualizationContainer, type VisualizationMode } from "./visualization-container";
 export { FamilyTreeView } from "./family-tree-view";
 export { TimelineView } from "./timeline-view";
-export { PersonNode, SpousePair, type PersonNodeProps, type SpousePairProps } from "./person-node";
+export { PersonNode, type PersonNodeProps } from "./person-node";
 export {
   useGenerationLayout,
   groupFamilyUnits,

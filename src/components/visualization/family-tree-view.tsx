@@ -69,7 +69,7 @@ export function FamilyTreeView() {
     const lines: Array<{
       from: { x: number; y: number };
       to: { x: number; y: number };
-      style: "solid" | "dashed" | "double" | "dotted";
+      style: "solid" | "double";
     }> = [];
 
     // Sort generations from top (oldest) to bottom (youngest)
@@ -135,7 +135,7 @@ export function FamilyTreeView() {
       });
     });
 
-    // Add parent-child and sibling lines
+    // Add parent-child lines only (spouse lines are added during unit positioning)
     for (const rel of relationships) {
       const fromPos = positions.get(rel.personAId);
       const toPos = positions.get(rel.personBId);
@@ -143,33 +143,10 @@ export function FamilyTreeView() {
 
       const relType = rel.type.toLowerCase();
 
-      // Determine relationship type using includes() to match variants
+      // Only draw lines for direct parent-child relationships
       const isParentChild =
-        relType.includes("parent") ||
-        relType.includes("child") ||
-        relType.includes("father") ||
-        relType.includes("mother") ||
-        relType.includes("son") ||
-        relType.includes("daughter");
-      const isSibling =
-        relType.includes("sibling") ||
-        relType.includes("brother") ||
-        relType.includes("sister");
-      const isGrandparentChild =
-        relType.includes("grandparent") ||
-        relType.includes("grandchild") ||
-        relType.includes("grandfather") ||
-        relType.includes("grandmother") ||
-        relType.includes("grandson") ||
-        relType.includes("granddaughter");
-      const isExtendedFamily =
-        relType.includes("aunt") ||
-        relType.includes("uncle") ||
-        relType.includes("niece") ||
-        relType.includes("nephew") ||
-        relType.includes("cousin") ||
-        relType.includes("in_law") ||
-        relType.includes("step");
+        relType === "parent" ||
+        relType === "child";
 
       if (isParentChild) {
         // Vertical line for parent-child
@@ -180,30 +157,6 @@ export function FamilyTreeView() {
           from: { x: parentPos.x, y: parentPos.y + 60 }, // Bottom of parent
           to: { x: childPos.x, y: childPos.y - 60 }, // Top of child
           style: "solid",
-        });
-      } else if (isSibling) {
-        // Sibling line - curved line above the nodes
-        lines.push({
-          from: { x: fromPos.x, y: fromPos.y - 70 }, // Top of first sibling
-          to: { x: toPos.x, y: toPos.y - 70 }, // Top of second sibling
-          style: "dashed",
-        });
-      } else if (isGrandparentChild) {
-        // Grandparent-grandchild line - dotted vertical line
-        const upperPos = fromPos.y < toPos.y ? fromPos : toPos;
-        const lowerPos = fromPos.y < toPos.y ? toPos : fromPos;
-
-        lines.push({
-          from: { x: upperPos.x, y: upperPos.y + 60 },
-          to: { x: lowerPos.x, y: lowerPos.y - 60 },
-          style: "dotted",
-        });
-      } else if (isExtendedFamily) {
-        // Extended family - dotted curved line
-        lines.push({
-          from: { x: fromPos.x, y: fromPos.y },
-          to: { x: toPos.x, y: toPos.y },
-          style: "dotted",
         });
       }
     }
@@ -437,93 +390,23 @@ export function FamilyTreeView() {
             style={{ left: 0, top: 0 }}
           >
             {svgLines.map((line, i) => {
-              const midY = (line.from.y + line.to.y) / 2;
-
               if (line.style === "double") {
                 // Horizontal spouse connector
                 return (
-                  <g key={i}>
-                    <line
-                      x1={line.from.x + contentBounds.width / 2}
-                      y1={line.from.y}
-                      x2={line.to.x + contentBounds.width / 2}
-                      y2={line.to.y}
-                      stroke="rgb(244, 114, 182)" // rose-400
-                      strokeWidth="3"
-                    />
-                  </g>
-                );
-              }
-
-              if (line.style === "dashed") {
-                // Sibling connector - curved line above nodes
-                const fromX = line.from.x + contentBounds.width / 2;
-                const toX = line.to.x + contentBounds.width / 2;
-                const y = line.from.y;
-                // Scale curve height based on distance between siblings
-                const distance = Math.abs(toX - fromX);
-                const curveHeight = Math.min(50, Math.max(20, distance * 0.15));
-
-                return (
-                  <path
+                  <line
                     key={i}
-                    d={`
-                      M ${fromX} ${y}
-                      Q ${(fromX + toX) / 2} ${y - curveHeight} ${toX} ${y}
-                    `}
-                    fill="none"
-                    stroke="rgb(34, 197, 94)" // green-500 for siblings
+                    x1={line.from.x + contentBounds.width / 2}
+                    y1={line.from.y}
+                    x2={line.to.x + contentBounds.width / 2}
+                    y2={line.to.y}
+                    className="stroke-rose-400 dark:stroke-rose-300"
                     strokeWidth="3"
-                    strokeDasharray="8,4"
                   />
                 );
               }
 
-              if (line.style === "dotted") {
-                // Extended family connector - dotted curved line
-                const fromX = line.from.x + contentBounds.width / 2;
-                const toX = line.to.x + contentBounds.width / 2;
-                const fromY = line.from.y;
-                const toY = line.to.y;
-
-                // If same generation, draw curved line; otherwise draw stepped line
-                if (Math.abs(fromY - toY) < 10) {
-                  const distance = Math.abs(toX - fromX);
-                  const curveHeight = Math.min(40, Math.max(15, distance * 0.1));
-                  return (
-                    <path
-                      key={i}
-                      d={`
-                        M ${fromX} ${fromY}
-                        Q ${(fromX + toX) / 2} ${fromY - curveHeight} ${toX} ${toY}
-                      `}
-                      fill="none"
-                      stroke="rgb(139, 92, 246)" // violet-500 for extended family
-                      strokeWidth="2"
-                      strokeDasharray="4,4"
-                    />
-                  );
-                } else {
-                  // Different generations - stepped line
-                  return (
-                    <path
-                      key={i}
-                      d={`
-                        M ${fromX} ${fromY}
-                        L ${fromX} ${midY}
-                        L ${toX} ${midY}
-                        L ${toX} ${toY}
-                      `}
-                      fill="none"
-                      stroke="rgb(139, 92, 246)" // violet-500 for extended family
-                      strokeWidth="2"
-                      strokeDasharray="4,4"
-                    />
-                  );
-                }
-              }
-
               // Parent-child vertical connector with step
+              const midY = (line.from.y + line.to.y) / 2;
               return (
                 <path
                   key={i}
@@ -534,7 +417,7 @@ export function FamilyTreeView() {
                     L ${line.to.x + contentBounds.width / 2} ${line.to.y}
                   `}
                   fill="none"
-                  stroke="rgb(148, 163, 184)" // slate-400
+                  className="stroke-muted-foreground/50"
                   strokeWidth="2"
                 />
               );
@@ -572,7 +455,7 @@ export function FamilyTreeView() {
       {/* Instructions - different for mobile vs desktop */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-muted-foreground bg-background/80 backdrop-blur px-3 py-1.5 rounded-full text-center">
         <span className="hidden sm:inline">Click to focus | Double-click for profile | Drag to pan | Ctrl+scroll to zoom</span>
-        <span className="sm:hidden">Tap to focus | Double-tap for profile | Drag to pan | Pinch to zoom</span>
+        <span className="sm:hidden">Tap to focus | Double-tap for profile</span>
       </div>
     </div>
   );
