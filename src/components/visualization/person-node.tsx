@@ -107,7 +107,7 @@ export const PersonNode = memo(function PersonNode({
       onMouseDown={handlePointerDown}
       onTouchStart={handlePointerDown}
       className={cn(
-        "flex flex-col items-center p-4 rounded-xl border-2 bg-card transition-all",
+        "relative flex flex-col items-center p-4 rounded-xl border-2 bg-card transition-all",
         "hover:shadow-lg cursor-pointer",
         isFocused && "ring-4 ring-primary/50 border-primary shadow-lg shadow-primary/20",
         !isFocused && "hover:border-primary/30",

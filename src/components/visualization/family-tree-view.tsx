@@ -5,12 +5,11 @@ import { useDataStore } from "@/stores/data-store";
 import {
   useGenerationLayout,
   groupFamilyUnits,
-  type FamilyUnit,
 } from "./hooks/use-generation-layout";
 import { useFocusState } from "./hooks/use-focus-state";
-import { PersonNode, SpousePair } from "./person-node";
+import { PersonNode } from "./person-node";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Home, ZoomIn, ZoomOut, Move, Hand } from "lucide-react";
+import { ArrowLeft, Home, ZoomIn, ZoomOut, Move } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Helper to get distance between two touch points
@@ -34,7 +33,6 @@ function getTouchCenter(touches: React.TouchList): { x: number; y: number } {
 const GENERATION_HEIGHT = 220;
 const NODE_WIDTH = 180;
 const SPOUSE_GAP = 24;
-const SIBLING_GAP = 48;
 const FAMILY_UNIT_GAP = 80;
 
 interface NodePosition {
@@ -47,6 +45,9 @@ export function FamilyTreeView() {
   const { people, relationships } = useDataStore();
   const { focusPersonId, setFocus, goBack, canGoBack, clearFocus } = useFocusState();
   const layout = useGenerationLayout(focusPersonId);
+
+  // Create a Map for O(1) person lookup instead of O(n) find() in render
+  const peopleMap = useMemo(() => new Map(people.map((p) => [p.id, p])), [people]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
@@ -68,7 +69,7 @@ export function FamilyTreeView() {
     const lines: Array<{
       from: { x: number; y: number };
       to: { x: number; y: number };
-      style: "solid" | "dashed" | "double";
+      style: "solid" | "dashed" | "double" | "dotted";
     }> = [];
 
     // Sort generations from top (oldest) to bottom (youngest)
@@ -142,9 +143,33 @@ export function FamilyTreeView() {
 
       const relType = rel.type.toLowerCase();
 
-      // Determine relationship type using exact matches
-      const isParentChild = relType === "parent" || relType === "child";
-      const isSibling = relType === "sibling";
+      // Determine relationship type using includes() to match variants
+      const isParentChild =
+        relType.includes("parent") ||
+        relType.includes("child") ||
+        relType.includes("father") ||
+        relType.includes("mother") ||
+        relType.includes("son") ||
+        relType.includes("daughter");
+      const isSibling =
+        relType.includes("sibling") ||
+        relType.includes("brother") ||
+        relType.includes("sister");
+      const isGrandparentChild =
+        relType.includes("grandparent") ||
+        relType.includes("grandchild") ||
+        relType.includes("grandfather") ||
+        relType.includes("grandmother") ||
+        relType.includes("grandson") ||
+        relType.includes("granddaughter");
+      const isExtendedFamily =
+        relType.includes("aunt") ||
+        relType.includes("uncle") ||
+        relType.includes("niece") ||
+        relType.includes("nephew") ||
+        relType.includes("cousin") ||
+        relType.includes("in_law") ||
+        relType.includes("step");
 
       if (isParentChild) {
         // Vertical line for parent-child
@@ -157,11 +182,28 @@ export function FamilyTreeView() {
           style: "solid",
         });
       } else if (isSibling) {
-        // Sibling line - curved line above the nodes (same generation check removed - trust the data)
+        // Sibling line - curved line above the nodes
         lines.push({
           from: { x: fromPos.x, y: fromPos.y - 70 }, // Top of first sibling
           to: { x: toPos.x, y: toPos.y - 70 }, // Top of second sibling
           style: "dashed",
+        });
+      } else if (isGrandparentChild) {
+        // Grandparent-grandchild line - dotted vertical line
+        const upperPos = fromPos.y < toPos.y ? fromPos : toPos;
+        const lowerPos = fromPos.y < toPos.y ? toPos : fromPos;
+
+        lines.push({
+          from: { x: upperPos.x, y: upperPos.y + 60 },
+          to: { x: lowerPos.x, y: lowerPos.y - 60 },
+          style: "dotted",
+        });
+      } else if (isExtendedFamily) {
+        // Extended family - dotted curved line
+        lines.push({
+          from: { x: fromPos.x, y: fromPos.y },
+          to: { x: toPos.x, y: toPos.y },
+          style: "dotted",
         });
       }
     }
@@ -284,8 +326,14 @@ export function FamilyTreeView() {
   useEffect(() => {
     if (focusPersonId) {
       centerOnPerson(focusPersonId);
+    } else if (nodePositions.size > 0) {
+      // No explicit focus - center on the first person in nodePositions (usually primary user or most connected)
+      const firstPersonId = nodePositions.keys().next().value;
+      if (firstPersonId) {
+        centerOnPerson(firstPersonId);
+      }
     }
-  }, [focusPersonId, centerOnPerson]);
+  }, [focusPersonId, centerOnPerson, nodePositions]);
 
   if (!layout || people.length === 0) {
     return (
@@ -353,21 +401,6 @@ export function FamilyTreeView() {
         </Button>
       </div>
 
-      {/* Generation labels */}
-      <div className="absolute left-4 top-20 z-10 flex flex-col gap-2">
-        {Array.from(layout.byGeneration.keys())
-          .sort((a, b) => a - b)
-          .map((gen, i) => (
-            <div
-              key={gen}
-              className="text-xs text-muted-foreground bg-background/80 backdrop-blur px-2 py-1 rounded"
-              style={{ marginTop: i === 0 ? 0 : GENERATION_HEIGHT * zoom - 24 }}
-            >
-              Gen {gen > 0 ? `+${gen}` : gen}
-            </div>
-          ))}
-      </div>
-
       {/* Canvas */}
       <div
         ref={containerRef}
@@ -427,7 +460,9 @@ export function FamilyTreeView() {
                 const fromX = line.from.x + contentBounds.width / 2;
                 const toX = line.to.x + contentBounds.width / 2;
                 const y = line.from.y;
-                const curveHeight = 30; // How high the curve arcs above
+                // Scale curve height based on distance between siblings
+                const distance = Math.abs(toX - fromX);
+                const curveHeight = Math.min(50, Math.max(20, distance * 0.15));
 
                 return (
                   <path
@@ -442,6 +477,50 @@ export function FamilyTreeView() {
                     strokeDasharray="8,4"
                   />
                 );
+              }
+
+              if (line.style === "dotted") {
+                // Extended family connector - dotted curved line
+                const fromX = line.from.x + contentBounds.width / 2;
+                const toX = line.to.x + contentBounds.width / 2;
+                const fromY = line.from.y;
+                const toY = line.to.y;
+
+                // If same generation, draw curved line; otherwise draw stepped line
+                if (Math.abs(fromY - toY) < 10) {
+                  const distance = Math.abs(toX - fromX);
+                  const curveHeight = Math.min(40, Math.max(15, distance * 0.1));
+                  return (
+                    <path
+                      key={i}
+                      d={`
+                        M ${fromX} ${fromY}
+                        Q ${(fromX + toX) / 2} ${fromY - curveHeight} ${toX} ${toY}
+                      `}
+                      fill="none"
+                      stroke="rgb(139, 92, 246)" // violet-500 for extended family
+                      strokeWidth="2"
+                      strokeDasharray="4,4"
+                    />
+                  );
+                } else {
+                  // Different generations - stepped line
+                  return (
+                    <path
+                      key={i}
+                      d={`
+                        M ${fromX} ${fromY}
+                        L ${fromX} ${midY}
+                        L ${toX} ${midY}
+                        L ${toX} ${toY}
+                      `}
+                      fill="none"
+                      stroke="rgb(139, 92, 246)" // violet-500 for extended family
+                      strokeWidth="2"
+                      strokeDasharray="4,4"
+                    />
+                  );
+                }
               }
 
               // Parent-child vertical connector with step
@@ -464,7 +543,7 @@ export function FamilyTreeView() {
 
           {/* Person Nodes */}
           {Array.from(nodePositions.entries()).map(([personId, pos]) => {
-            const person = people.find((p) => p.id === personId);
+            const person = peopleMap.get(personId);
             if (!person) return null;
 
             const degree = layout.degrees.get(personId) ?? Infinity;
