@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhotoUpload } from "@/components/ui/photo-upload";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getInitials } from "@/lib/utils";
+import { getInitials, getDisplayName } from "@/lib/utils";
 import { Crown, ArrowRight, Sparkles, Users } from "lucide-react";
 import { toast } from "sonner";
 
@@ -210,7 +210,7 @@ export default function OnboardingPage() {
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium">
-                          {person.firstName} {person.lastName}
+                          {getDisplayName(person.firstName, person.lastName)}
                         </p>
                         {person.nickname && (
                           <p className="text-sm text-muted-foreground">

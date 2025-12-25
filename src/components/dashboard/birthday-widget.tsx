@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useBirthdayReminders } from "@/features/use-birthday-reminders";
-import { getInitials } from "@/lib/utils";
+import { getInitials, getDisplayName } from "@/lib/utils";
 import { Cake, PartyPopper, Gift } from "lucide-react";
 
 export const BirthdayWidget = memo(function BirthdayWidget() {
@@ -53,7 +53,7 @@ export const BirthdayWidget = memo(function BirthdayWidget() {
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="font-medium truncate">
-                {person.nickname || `${person.firstName} ${person.lastName}`}
+                {person.nickname || getDisplayName(person.firstName, person.lastName)}
               </p>
               <p className="text-sm text-muted-foreground">
                 {info.shortDisplay} &middot; Turning {info.age + 1}

@@ -22,7 +22,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Crown, X } from "lucide-react";
 import { toast } from "sonner";
-import { getInitials } from "@/lib/utils";
+import { getInitials, getDisplayName } from "@/lib/utils";
 
 export function MyProfileCard() {
   const { people } = useDataStore();
@@ -51,7 +51,7 @@ export function MyProfileCard() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="font-semibold truncate">
-                  {me.firstName} {me.lastName}
+                  {getDisplayName(me.firstName, me.lastName)}
                 </p>
                 <Badge className="bg-amber-500 hover:bg-amber-600 shrink-0">
                   <Crown className="h-3 w-3 mr-1" aria-hidden="true" />
@@ -95,7 +95,7 @@ export function MyProfileCard() {
                   <SelectContent>
                     {people.map((person) => (
                       <SelectItem key={person.id} value={person.id}>
-                        <span>{person.firstName} {person.lastName}</span>
+                        <span>{getDisplayName(person.firstName, person.lastName)}</span>
                       </SelectItem>
                     ))}
                   </SelectContent>

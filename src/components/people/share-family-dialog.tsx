@@ -33,7 +33,7 @@ import {
   Image,
 } from "lucide-react";
 import { useDataStore } from "@/stores/data-store";
-import { getInitials } from "@/lib/utils";
+import { getInitials, getDisplayName } from "@/lib/utils";
 import { v4 as uuid } from "uuid";
 
 interface ShareFamilyDialogProps {
@@ -82,7 +82,7 @@ export function ShareFamilyDialog({
   const primaryUser = useMemo(() => {
     if (!settings.primaryUserId) return undefined;
     const user = people.find((p) => p.id === settings.primaryUserId);
-    return user ? `${user.firstName} ${user.lastName}`.trim() : undefined;
+    return user ? getDisplayName(user.firstName, user.lastName) : undefined;
   }, [settings.primaryUserId, people]);
 
   const handleShare = async () => {
@@ -217,7 +217,7 @@ export function ShareFamilyDialog({
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">
-                          {person.firstName} {person.lastName}
+                          {getDisplayName(person.firstName, person.lastName)}
                         </p>
                         {person.email && (
                           <p className="text-xs text-muted-foreground truncate">

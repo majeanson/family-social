@@ -26,7 +26,7 @@ import {
   Link2,
   AlertTriangle,
 } from "lucide-react";
-import { getInitials } from "@/lib/utils";
+import { getInitials, getDisplayName } from "@/lib/utils";
 import { v4 as uuid } from "uuid";
 import type { RelationshipType } from "@/types";
 
@@ -397,7 +397,7 @@ export default function ImportFamilyPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-medium truncate">
-                          {person.firstName} {person.lastName}
+                          {getDisplayName(person.firstName, person.lastName)}
                         </p>
                         {isDuplicate && (
                           <Badge variant="outline" className="text-amber-600 border-amber-300">

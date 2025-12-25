@@ -25,7 +25,7 @@ import {
   Clock,
   Loader2,
 } from "lucide-react";
-import { getInitials } from "@/lib/utils";
+import { getInitials, getDisplayName } from "@/lib/utils";
 
 interface ShareData {
   firstName: string;
@@ -164,7 +164,7 @@ export default function ImportCodePage() {
             </div>
             <CardTitle>Added Successfully!</CardTitle>
             <CardDescription>
-              {personData.firstName} {personData.lastName} has been added to your people.
+              {getDisplayName(personData.firstName, personData.lastName)} has been added to your people.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -235,7 +235,7 @@ export default function ImportCodePage() {
               </Avatar>
               <div>
                 <CardTitle className="text-xl">
-                  {personData.firstName} {personData.lastName}
+                  {getDisplayName(personData.firstName, personData.lastName)}
                 </CardTitle>
                 {personData.nickname && (
                   <CardDescription>&quot;{personData.nickname}&quot;</CardDescription>

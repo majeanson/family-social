@@ -38,6 +38,17 @@ export function getInitials(firstName: string, lastName?: string): string {
 }
 
 /**
+ * Get display name in "LastName FirstName" format
+ * Falls back to just firstName if no lastName
+ */
+export function getDisplayName(firstName: string, lastName?: string): string {
+  if (lastName) {
+    return `${lastName} ${firstName}`;
+  }
+  return firstName;
+}
+
+/**
  * Tailwind color class to hex color mapping
  * Used for canvas/SVG elements that don't support Tailwind classes
  */

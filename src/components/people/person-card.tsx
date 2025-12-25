@@ -13,7 +13,7 @@ import { useDataStore } from "@/stores/data-store";
 import type { Person, RelationshipType } from "@/types";
 import { RELATIONSHIP_CONFIG } from "@/types";
 import { getBirthdayInfo } from "@/lib/date-utils";
-import { getInitials, cn, getRelationshipColor } from "@/lib/utils";
+import { getInitials, getDisplayName, cn, getRelationshipColor } from "@/lib/utils";
 import { useFamilyGroups, usePrimaryUser } from "@/features";
 import { FamilyBadge, FamilyDot } from "./family-badge";
 import { Calendar, Mail, Phone, StickyNote, ArrowUpRight, Crown } from "lucide-react";
@@ -31,7 +31,7 @@ export const PersonCard = memo(function PersonCard({ person, className }: Person
   const isThisPersonMe = isMe(person.id);
   const initials = getInitials(person.firstName, person.lastName);
   const birthday = getBirthdayInfo(person.birthday);
-  const displayName = person.nickname || `${person.firstName} ${person.lastName}`;
+  const displayName = person.nickname || getDisplayName(person.firstName, person.lastName);
   const family = getFamilyGroup(person.id);
   const familyColor = getFamilyColor(person.id);
 
@@ -53,7 +53,7 @@ export const PersonCard = memo(function PersonCard({ person, className }: Person
         <div className="flex items-start gap-4">
           <div className="relative">
             <Avatar className="h-14 w-14 ring-2 ring-background shadow-sm">
-              {person.photo && <AvatarImage src={person.photo} alt={`Photo of ${person.firstName} ${person.lastName}`} />}
+              {person.photo && <AvatarImage src={person.photo} alt={`Photo of ${getDisplayName(person.firstName, person.lastName)}`} />}
               <AvatarFallback className={cn(
                 "text-lg font-medium",
                 familyColor ? `${familyColor.bg} text-white` : "bg-primary/10 text-primary"
@@ -77,7 +77,7 @@ export const PersonCard = memo(function PersonCard({ person, className }: Person
             </div>
             {person.nickname && (
               <p className="text-sm text-muted-foreground truncate">
-                {person.firstName} {person.lastName}
+                {getDisplayName(person.firstName, person.lastName)}
               </p>
             )}
             <div className="flex flex-wrap gap-1 pt-1">

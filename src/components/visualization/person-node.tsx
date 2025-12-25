@@ -4,7 +4,7 @@ import { memo, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { cn, getInitials } from "@/lib/utils";
+import { cn, getInitials, getDisplayName } from "@/lib/utils";
 import { getBirthdayInfo } from "@/lib/date-utils";
 import { useFamilyGroups, usePrimaryUser } from "@/features";
 import { getDegreeStyles } from "./hooks/use-focus-state";
@@ -37,7 +37,7 @@ export const PersonNode = memo(function PersonNode({
   const isThisPersonMe = isMe(person.id);
   const initials = getInitials(person.firstName, person.lastName);
   const birthday = useMemo(() => getBirthdayInfo(person.birthday), [person.birthday]);
-  const displayName = person.nickname || person.firstName;
+  const displayName = person.nickname || getDisplayName(person.firstName, person.lastName);
   const styles = getDegreeStyles(degree);
 
   // Track last tap time for double-tap detection
@@ -82,7 +82,7 @@ export const PersonNode = memo(function PersonNode({
         style={{ opacity: styles.opacity }}
       >
         <Avatar className="h-8 w-8">
-          {person.photo && <AvatarImage src={person.photo} alt={`Photo of ${person.firstName} ${person.lastName}`} />}
+          {person.photo && <AvatarImage src={person.photo} alt={`Photo of ${getDisplayName(person.firstName, person.lastName)}`} />}
           <AvatarFallback
             className={cn(
               "text-xs font-medium",
@@ -129,7 +129,7 @@ export const PersonNode = memo(function PersonNode({
             isFocused ? "h-16 w-16" : "h-14 w-14"
           )}
         >
-          {person.photo && <AvatarImage src={person.photo} alt={`Photo of ${person.firstName} ${person.lastName}`} />}
+          {person.photo && <AvatarImage src={person.photo} alt={`Photo of ${getDisplayName(person.firstName, person.lastName)}`} />}
           <AvatarFallback
             className={cn(
               "text-lg font-medium",
@@ -153,12 +153,7 @@ export const PersonNode = memo(function PersonNode({
         </h3>
         {person.nickname && (
           <p className="text-xs text-muted-foreground truncate px-1">
-            {person.firstName} {person.lastName}
-          </p>
-        )}
-        {!person.nickname && person.lastName && (
-          <p className="text-xs text-muted-foreground truncate px-1">
-            {person.lastName}
+            {getDisplayName(person.firstName, person.lastName)}
           </p>
         )}
       </div>

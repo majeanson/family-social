@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { getDisplayName } from "@/lib/utils";
 import {
   Users,
   Download,
@@ -446,7 +447,7 @@ export function FamilyExportImport() {
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
                             <p className="font-medium">
-                              {person.firstName} {person.lastName}
+                              {getDisplayName(person.firstName, person.lastName)}
                             </p>
                             {person.email && (
                               <p className="text-xs text-muted-foreground">{person.email}</p>
@@ -454,7 +455,7 @@ export function FamilyExportImport() {
                             {hasMatches && (
                               <div className="mt-2">
                                 <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">
-                                  Possible match: {matches[0].existingPerson.firstName} {matches[0].existingPerson.lastName}
+                                  Possible match: {getDisplayName(matches[0].existingPerson.firstName, matches[0].existingPerson.lastName)}
                                 </p>
                                 <div className="flex flex-wrap gap-1">
                                   {matches[0].matchReasons.map((reason, i) => (

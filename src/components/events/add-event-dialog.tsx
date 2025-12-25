@@ -27,7 +27,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Bell } from "lucide-react";
 import { toast } from "sonner";
-import { getInitials } from "@/lib/utils";
+import { getInitials, getDisplayName } from "@/lib/utils";
 import type { EventType, FamilyEventFormData, FamilyEvent, ReminderTiming } from "@/types";
 import { EVENT_TYPE_CONFIG, REMINDER_TIMING_CONFIG, DEFAULT_NOTIFICATION_SETTINGS } from "@/types";
 
@@ -292,7 +292,7 @@ export function AddEventDialog({
                         </AvatarFallback>
                       </Avatar>
                       <span className="text-sm">
-                        {person.firstName} {person.lastName}
+                        {getDisplayName(person.firstName, person.lastName)}
                       </span>
                     </div>
                   ))}

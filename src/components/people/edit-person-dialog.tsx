@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { X, Plus, Trash2, Users, UserPlus, MapPin, Home, RotateCcw, Pencil, Check } from "lucide-react";
-import { isValidEmail, isValidBirthday, isValidPhone } from "@/lib/utils";
+import { isValidEmail, isValidBirthday, isValidPhone, getDisplayName } from "@/lib/utils";
 import type { Person } from "@/types";
 import { RelationshipSelector } from "@/components/relationships";
 import { RELATIONSHIP_CONFIG, type RelationshipType } from "@/types";
@@ -807,7 +807,7 @@ function EditPersonFormContent({
                       />
                       <div>
                         <span className="font-medium hover:underline">
-                          {relatedPerson.firstName} {relatedPerson.lastName}
+                          {getDisplayName(relatedPerson.firstName, relatedPerson.lastName)}
                         </span>
                         <span className="text-muted-foreground ml-2">
                           ({config?.label || relationType})
@@ -842,7 +842,7 @@ function EditPersonFormContent({
                 <SelectContent>
                   {availablePeople.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
-                      {p.firstName} {p.lastName}
+                      {getDisplayName(p.firstName, p.lastName)}
                     </SelectItem>
                   ))}
                 </SelectContent>

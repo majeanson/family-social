@@ -13,7 +13,7 @@ import Link from "next/link";
 import { VisualizationContainer } from "@/components/visualization";
 import { useFamilyGroups } from "@/features/use-family-groups";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getInitials, getRelationshipColor } from "@/lib/utils";
+import { getInitials, getDisplayName, getRelationshipColor } from "@/lib/utils";
 import { type RelationshipType } from "@/types";
 
 export default function GraphPage() {
@@ -36,7 +36,7 @@ export default function GraphPage() {
         aRels.push({
           personId: rel.personBId,
           type: rel.type,
-          name: `${personB.firstName} ${personB.lastName}`,
+          name: getDisplayName(personB.firstName, personB.lastName),
         });
         map.set(rel.personAId, aRels);
 
@@ -45,7 +45,7 @@ export default function GraphPage() {
         bRels.push({
           personId: rel.personAId,
           type: rel.reverseType || rel.type,
-          name: `${personA.firstName} ${personA.lastName}`,
+          name: getDisplayName(personA.firstName, personA.lastName),
         });
         map.set(rel.personBId, bRels);
       }
@@ -177,7 +177,7 @@ export default function GraphPage() {
                           >
                             <Avatar className="h-10 w-10">
                               {personA.photo && (
-                                <AvatarImage src={personA.photo} alt={`Photo of ${personA.firstName} ${personA.lastName}`} />
+                                <AvatarImage src={personA.photo} alt={`Photo of ${getDisplayName(personA.firstName, personA.lastName)}`} />
                               )}
                               <AvatarFallback className="text-sm bg-primary/10 text-primary">
                                 {getInitials(personA.firstName, personA.lastName)}
@@ -185,7 +185,7 @@ export default function GraphPage() {
                             </Avatar>
                             <div className="min-w-0">
                               <p className="font-medium truncate">
-                                {personA.firstName} {personA.lastName}
+                                {getDisplayName(personA.firstName, personA.lastName)}
                               </p>
                             </div>
                           </Link>
@@ -203,12 +203,12 @@ export default function GraphPage() {
                           >
                             <div className="min-w-0 text-right">
                               <p className="font-medium truncate">
-                                {personB.firstName} {personB.lastName}
+                                {getDisplayName(personB.firstName, personB.lastName)}
                               </p>
                             </div>
                             <Avatar className="h-10 w-10">
                               {personB.photo && (
-                                <AvatarImage src={personB.photo} alt={`Photo of ${personB.firstName} ${personB.lastName}`} />
+                                <AvatarImage src={personB.photo} alt={`Photo of ${getDisplayName(personB.firstName, personB.lastName)}`} />
                               )}
                               <AvatarFallback className="text-sm bg-primary/10 text-primary">
                                 {getInitials(personB.firstName, personB.lastName)}
@@ -237,7 +237,7 @@ export default function GraphPage() {
                         <div className="flex items-center gap-3">
                           <Avatar className="h-12 w-12">
                             {person.photo && (
-                              <AvatarImage src={person.photo} alt={`Photo of ${person.firstName} ${person.lastName}`} />
+                              <AvatarImage src={person.photo} alt={`Photo of ${getDisplayName(person.firstName, person.lastName)}`} />
                             )}
                             <AvatarFallback className="bg-primary/10 text-primary">
                               {getInitials(person.firstName, person.lastName)}
@@ -245,7 +245,7 @@ export default function GraphPage() {
                           </Avatar>
                           <div>
                             <CardTitle className="text-base">
-                              {person.firstName} {person.lastName}
+                              {getDisplayName(person.firstName, person.lastName)}
                             </CardTitle>
                             <p className="text-sm text-muted-foreground">
                               {connections.length} connection{connections.length !== 1 ? "s" : ""}

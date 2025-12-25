@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { isValidEmail, isValidBirthday, isValidPhone } from "@/lib/utils";
+import { isValidEmail, isValidBirthday, isValidPhone, getDisplayName } from "@/lib/utils";
 import type { RelationshipType, FormTemplate, Person } from "@/types";
 import { RELATIONSHIP_CONFIG } from "@/types";
 import { MOCK_FORM_TEMPLATES } from "@/lib/mock-data";
@@ -452,7 +452,7 @@ export function QuickAddPerson({ open, onOpenChange }: QuickAddPersonProps) {
                         <SelectContent>
                           {people.map((person) => (
                             <SelectItem key={person.id} value={person.id}>
-                              {person.firstName} {person.lastName}
+                              {getDisplayName(person.firstName, person.lastName)}
                             </SelectItem>
                           ))}
                         </SelectContent>

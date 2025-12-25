@@ -64,7 +64,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { getInitials, cn, getRelationshipColor, formatAddressLine } from "@/lib/utils";
+import { getInitials, getDisplayName, cn, getRelationshipColor, formatAddressLine } from "@/lib/utils";
 import type { RelationshipType } from "@/types";
 
 interface PageProps {
@@ -186,7 +186,7 @@ export default function PersonProfilePage({ params }: PageProps) {
             {/* Avatar */}
             <div className="relative mx-auto sm:mx-0">
               <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-background shadow-lg">
-                {person.photo && <AvatarImage src={person.photo} alt={`Photo of ${person.firstName} ${person.lastName}`} />}
+                {person.photo && <AvatarImage src={person.photo} alt={`Photo of ${getDisplayName(person.firstName, person.lastName)}`} />}
                 <AvatarFallback className={cn(
                   "text-3xl",
                   familyColor ? `${familyColor.bg} text-white` : "bg-primary/10 text-primary"
@@ -208,7 +208,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <h1 className="text-2xl sm:text-3xl font-bold">
-                      {person.firstName} {person.lastName}
+                      {getDisplayName(person.firstName, person.lastName)}
                     </h1>
                     {isThisPersonMe && (
                       <Badge className="gap-1 bg-amber-500 hover:bg-amber-600 shrink-0">
@@ -400,7 +400,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                         >
                           <Avatar className="h-12 w-12">
                             {relatedPerson.photo && (
-                              <AvatarImage src={relatedPerson.photo} alt={`Photo of ${relatedPerson.firstName} ${relatedPerson.lastName}`} />
+                              <AvatarImage src={relatedPerson.photo} alt={`Photo of ${getDisplayName(relatedPerson.firstName, relatedPerson.lastName)}`} />
                             )}
                             <AvatarFallback className="bg-primary/10 text-primary">
                               {getInitials(relatedPerson.firstName, relatedPerson.lastName)}
@@ -408,7 +408,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">
-                              {relatedPerson.firstName} {relatedPerson.lastName}
+                              {getDisplayName(relatedPerson.firstName, relatedPerson.lastName)}
                             </p>
                             <div className="flex items-center gap-1.5">
                               <span className={`h-2 w-2 rounded-full ${color}`} aria-hidden="true" />
@@ -443,7 +443,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                         >
                           <Avatar className="h-12 w-12">
                             {relatedPerson.photo && (
-                              <AvatarImage src={relatedPerson.photo} alt={`Photo of ${relatedPerson.firstName} ${relatedPerson.lastName}`} />
+                              <AvatarImage src={relatedPerson.photo} alt={`Photo of ${getDisplayName(relatedPerson.firstName, relatedPerson.lastName)}`} />
                             )}
                             <AvatarFallback className="bg-primary/10 text-primary">
                               {getInitials(relatedPerson.firstName, relatedPerson.lastName)}
@@ -451,7 +451,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">
-                              {relatedPerson.firstName} {relatedPerson.lastName}
+                              {getDisplayName(relatedPerson.firstName, relatedPerson.lastName)}
                             </p>
                             <div className="flex items-center gap-1.5">
                               <span className={`h-2 w-2 rounded-full ${color}`} aria-hidden="true" />
@@ -486,7 +486,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                         >
                           <Avatar className="h-12 w-12">
                             {relatedPerson.photo && (
-                              <AvatarImage src={relatedPerson.photo} alt={`Photo of ${relatedPerson.firstName} ${relatedPerson.lastName}`} />
+                              <AvatarImage src={relatedPerson.photo} alt={`Photo of ${getDisplayName(relatedPerson.firstName, relatedPerson.lastName)}`} />
                             )}
                             <AvatarFallback className="bg-primary/10 text-primary">
                               {getInitials(relatedPerson.firstName, relatedPerson.lastName)}
@@ -494,7 +494,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">
-                              {relatedPerson.firstName} {relatedPerson.lastName}
+                              {getDisplayName(relatedPerson.firstName, relatedPerson.lastName)}
                             </p>
                             <div className="flex items-center gap-1.5">
                               <span className={`h-2 w-2 rounded-full ${color}`} aria-hidden="true" />
@@ -529,7 +529,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                         >
                           <Avatar className="h-12 w-12">
                             {relatedPerson.photo && (
-                              <AvatarImage src={relatedPerson.photo} alt={`Photo of ${relatedPerson.firstName} ${relatedPerson.lastName}`} />
+                              <AvatarImage src={relatedPerson.photo} alt={`Photo of ${getDisplayName(relatedPerson.firstName, relatedPerson.lastName)}`} />
                             )}
                             <AvatarFallback className="bg-muted text-muted-foreground">
                               {getInitials(relatedPerson.firstName, relatedPerson.lastName)}
@@ -537,7 +537,7 @@ export default function PersonProfilePage({ params }: PageProps) {
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">
-                              {relatedPerson.firstName} {relatedPerson.lastName}
+                              {getDisplayName(relatedPerson.firstName, relatedPerson.lastName)}
                             </p>
                             <div className="flex items-center gap-1.5">
                               <span className={`h-2 w-2 rounded-full ${color}`} aria-hidden="true" />

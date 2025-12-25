@@ -74,9 +74,9 @@ import { DEFAULT_FAMILY_COLORS, RELATIONSHIP_CONFIG, getGroupedRelationshipTypes
 import { Switch } from "@/components/ui/switch";
 import { GoogleDriveSync } from "@/components/sync/google-drive-sync";
 import { useFamilyGroups, usePrimaryUser } from "@/features";
-import { COLOR_OPTIONS, RELATIONSHIP_COLOR_OPTIONS, getRelationshipColor, getInitials } from "@/lib/utils";
+import { COLOR_OPTIONS, RELATIONSHIP_COLOR_OPTIONS, getRelationshipColor, getInitials, getDisplayName } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { FamilyExportImport } from "@/components/settings";
+import { FamilyExportImport, RelationshipSuggestions } from "@/components/settings";
 
 // Settings sections for search
 const SETTINGS_SECTIONS = [
@@ -84,6 +84,7 @@ const SETTINGS_SECTIONS = [
   { id: "data", tab: "sync", keywords: ["data", "summary", "storage", "people", "relationships"] },
   { id: "import-export", tab: "sync", keywords: ["import", "export", "backup", "file", "json", "link", "paste", "family"] },
   { id: "profile", tab: "profile", keywords: ["me", "profile", "primary", "user", "myself"] },
+  { id: "suggestions", tab: "profile", keywords: ["suggestion", "missing", "infer", "detect", "sibling", "in-law", "niece", "nephew", "cousin", "grandparent"] },
   { id: "theme", tab: "appearance", keywords: ["theme", "dark", "light", "mode", "color", "appearance"] },
   { id: "display", tab: "appearance", keywords: ["display", "view", "sort", "cards", "graph"] },
   { id: "colors", tab: "appearance", keywords: ["color", "family", "relationship", "customize"] },
@@ -531,7 +532,7 @@ export default function SettingsPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">
-                        {me.firstName} {me.lastName}
+                        {getDisplayName(me.firstName, me.lastName)}
                       </p>
                       <Badge className="bg-amber-500 hover:bg-amber-600">
                         <Crown className="h-3 w-3 mr-1" />
@@ -576,7 +577,7 @@ export default function SettingsPage() {
                           {people.map((person) => (
                             <SelectItem key={person.id} value={person.id}>
                               <div className="flex items-center gap-2">
-                                <span>{person.firstName} {person.lastName}</span>
+                                <span>{getDisplayName(person.firstName, person.lastName)}</span>
                               </div>
                             </SelectItem>
                           ))}
@@ -592,6 +593,9 @@ export default function SettingsPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Relationship Suggestions */}
+          <RelationshipSuggestions />
         </TabsContent>
 
         {/* APPEARANCE TAB */}
