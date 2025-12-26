@@ -67,13 +67,15 @@ import {
   Sparkles,
   Link2,
   Loader2,
+  HelpCircle,
+  Play,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { AppSettings, FamilyColorConfig, RelationshipType, ReminderTiming, ThemePreset, CustomTheme, ThemeColors } from "@/types";
 import { DEFAULT_FAMILY_COLORS, RELATIONSHIP_CONFIG, getGroupedRelationshipTypes, REMINDER_TIMING_CONFIG, DEFAULT_NOTIFICATION_SETTINGS, THEME_PRESETS } from "@/types";
 import { Switch } from "@/components/ui/switch";
 import { GoogleDriveSync } from "@/components/sync/google-drive-sync";
-import { useFamilyGroups, usePrimaryUser } from "@/features";
+import { useFamilyGroups, usePrimaryUser, useAppTour } from "@/features";
 import { COLOR_OPTIONS, RELATIONSHIP_COLOR_OPTIONS, getRelationshipColor, getInitials, getDisplayName } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FamilyExportImport, RelationshipSuggestions } from "@/components/settings";
@@ -83,6 +85,7 @@ const SETTINGS_SECTIONS = [
   { id: "sync", tab: "sync", keywords: ["sync", "google", "drive", "cloud", "backup", "upload", "download", "link", "share", "family"] },
   { id: "data", tab: "sync", keywords: ["data", "summary", "storage", "people", "relationships"] },
   { id: "import-export", tab: "sync", keywords: ["import", "export", "backup", "file", "json", "link", "paste", "family"] },
+  { id: "help", tab: "sync", keywords: ["help", "tour", "guide", "tutorial", "learn", "how"] },
   { id: "profile", tab: "profile", keywords: ["me", "profile", "primary", "user", "myself"] },
   { id: "suggestions", tab: "profile", keywords: ["suggestion", "missing", "infer", "detect", "sibling", "in-law", "niece", "nephew", "cousin", "grandparent"] },
   { id: "theme", tab: "appearance", keywords: ["theme", "dark", "light", "mode", "color", "appearance"] },
@@ -108,6 +111,7 @@ export default function SettingsPage() {
   const [editingFamilyId, setEditingFamilyId] = useState<string | null>(null);
   const [editingFamilyName, setEditingFamilyName] = useState("");
   const { me, setAsMe, clearMe } = usePrimaryUser();
+  const { restartTour, hasMockData } = useAppTour();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -499,6 +503,34 @@ export default function SettingsPage() {
                     Open Different Data File
                   </Button>
                 </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Family Export/Import */}
+          {/* Help & Tour */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <HelpCircle className="h-5 w-5" />
+                Help & Tour
+              </CardTitle>
+              <CardDescription>
+                Learn how to use Famolo with a guided tour
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                New to Famolo? Take a quick tour to learn about all the features - managing people, visualizing relationships, tracking events, and more.
+              </p>
+              <Button onClick={restartTour} variant="outline" className="gap-2">
+                <Play className="h-4 w-4" />
+                {hasMockData ? "Replay Tour" : "Start Tour"}
+              </Button>
+              {hasMockData && (
+                <p className="text-xs text-muted-foreground">
+                  You&apos;re viewing sample data. Add your first person to start using Famolo with your own data.
+                </p>
               )}
             </CardContent>
           </Card>

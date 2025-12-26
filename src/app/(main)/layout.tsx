@@ -1,5 +1,6 @@
 import { Header, DataProvider, ThemeProvider, InstallPrompt } from "@/components/layout";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { AppTourDialog } from "@/components/tour";
 
 export default function MainLayout({
   children,
@@ -18,6 +19,7 @@ export default function MainLayout({
           </main>
         </div>
         <InstallPrompt />
+        <AppTourDialog />
       </ThemeProvider>
     </DataProvider>
   );
